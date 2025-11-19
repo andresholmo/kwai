@@ -53,7 +53,7 @@ export default function LoginPage() {
         email,
         password,
         options: {
-          emailRedirectTo: `${location.origin}/auth/callback`,
+          emailRedirectTo: `${location.origin}/api/auth/callback`,
         },
       });
 

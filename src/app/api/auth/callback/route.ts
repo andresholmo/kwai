@@ -11,12 +11,18 @@ export async function GET(request: NextRequest) {
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type");
 
-  if (tokenHash || type === "signup") {
-    // Callback do Supabase - processar confirmação de email
+  // Detectar callback do Supabase
+  if (tokenHash || type === "signup" || type === "recovery") {
+    // Callback do Supabase - processar confirmação de email ou recuperação
     if (code) {
       const supabase = createClient();
       await supabase.auth.exchangeCodeForSession(code);
     }
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  // Se não tem code e não tem error, pode ser callback do Supabase sem parâmetros
+  if (!code && !error) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
@@ -34,8 +40,17 @@ export async function GET(request: NextRequest) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
+
+    // Se não há usuário autenticado e há code, pode ser callback do Supabase
+    // Tentar processar como Supabase primeiro
     if (!user) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      try {
+        await supabase.auth.exchangeCodeForSession(code);
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      } catch (supabaseError) {
+        // Se falhar, não é callback do Supabase, redirecionar para login
+        return NextResponse.redirect(new URL("/login", request.url));
+      }
     }
 
     // Trocar code por access token
