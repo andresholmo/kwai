@@ -105,16 +105,26 @@ class KwaiAPI {
 
   /**
    * Buscar lista de contas
+   * Nota: Esta API requer agentId ou corpId
    */
-  async getAccounts(): Promise<KwaiAccount[]> {
+  async getAccounts(agentId?: number): Promise<KwaiAccount[]> {
     console.log("Chamando API do Kwai: getAccounts");
     console.log("Endpoint:", "/rest/n/mapi/report/crmAccountQueryByAgentOrCorp");
     console.log("Access Token configurado:", this.accessToken ? "Sim" : "Não");
 
     try {
+      const body: any = {};
+
+      // Se agentId foi fornecido, usar ele
+      if (agentId) {
+        body.agentId = agentId;
+      }
+
+      console.log("Request body:", JSON.stringify(body, null, 2));
+
       const response = await this.client.post(
         "/rest/n/mapi/report/crmAccountQueryByAgentOrCorp",
-        {}
+        body
       );
 
       console.log("Response status:", response.status);
@@ -122,13 +132,13 @@ class KwaiAPI {
       console.log("Response data completo:", JSON.stringify(response.data, null, 2));
 
       const accounts = response.data.data?.data || [];
-      console.log("Contas extraídas:", accounts.length);
+      console.log("Accounts found:", accounts.length);
       console.log("Estrutura de dados:", JSON.stringify(accounts, null, 2));
 
       return accounts;
     } catch (error: any) {
       console.error("Erro ao buscar contas:", error);
-      console.error("Erro response:", error.response?.data);
+      console.error("Error response:", error.response?.data);
       console.error("Erro status:", error.response?.status);
       throw error;
     }
