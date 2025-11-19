@@ -2,6 +2,8 @@
 
 Dashboard de Gerenciamento de Campanhas do Kwai Marketing API desenvolvido com Next.js 14+ e App Router.
 
+**Repositório:** https://github.com/andresholmo/kwai
+
 ## 🚀 Tecnologias
 
 - **Next.js 14+** (App Router)
@@ -26,8 +28,8 @@ Dashboard de Gerenciamento de Campanhas do Kwai Marketing API desenvolvido com N
 1. **Clone o repositório**
 
 ```bash
-git clone <seu-repositorio>
-cd dash-kwai
+git clone https://github.com/andresholmo/kwai.git
+cd kwai
 ```
 
 2. **Instale as dependências**
@@ -38,10 +40,10 @@ npm install
 
 3. **Configure as variáveis de ambiente**
 
-Copie o arquivo `.env.local.example` para `.env.local`:
+Copie o arquivo `env.local.example` para `.env.local`:
 
 ```bash
-cp .env.local.example .env.local
+cp env.local.example .env.local
 ```
 
 Edite o arquivo `.env.local` com suas credenciais:
@@ -208,4 +210,3 @@ Este projeto é privado e proprietário.
 ## 📞 Suporte
 
 Para suporte, entre em contato com a equipe de desenvolvimento.
-
