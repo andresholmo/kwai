@@ -91,9 +91,45 @@ export default function DashboardPage() {
         <CardContent>
           {isConnected ? (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                {accounts.length} conta(s) sincronizada(s)
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-gray-600">
+                  {accounts.length} conta(s) sincronizada(s)
+                </p>
+                <Button
+                  onClick={async () => {
+                    try {
+                      const response = await fetch("/api/kwai/sync-accounts", {
+                        method: "POST",
+                      });
+                      const data = await response.json();
+                      if (data.success) {
+                        toast({
+                          title: "Sucesso!",
+                          description: data.message,
+                        });
+                        // Refresh accounts
+                        window.location.reload();
+                      } else {
+                        toast({
+                          title: "Erro",
+                          description: data.error || "Erro ao sincronizar",
+                          variant: "destructive",
+                        });
+                      }
+                    } catch (error: any) {
+                      toast({
+                        title: "Erro",
+                        description: error.message || "Erro ao sincronizar",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                >
+                  Sincronizar Contas Manualmente
+                </Button>
+              </div>
               <div className="space-y-2">
                 {accounts.map((account) => (
                   <div
