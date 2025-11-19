@@ -108,12 +108,12 @@ export async function GET(request: NextRequest) {
     kwaiAPI.setAccessToken(tokenData.access_token);
 
     console.log("Buscando contas do Kwai...");
-    const agentId = process.env.KWAI_AGENT_ID
-      ? parseInt(process.env.KWAI_AGENT_ID)
+    const corpId = process.env.KWAI_CORP_ID
+      ? parseInt(process.env.KWAI_CORP_ID)
       : undefined;
-    console.log("Agent ID:", agentId);
+    console.log("Corp ID:", corpId);
 
-    const accounts = await kwaiAPI.getAccounts(agentId);
+    const accounts = await kwaiAPI.getAccounts(corpId);
     console.log("Contas retornadas:", JSON.stringify(accounts, null, 2));
     console.log("Número de contas:", accounts?.length || 0);
 

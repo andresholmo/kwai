@@ -105,9 +105,9 @@ class KwaiAPI {
 
   /**
    * Buscar lista de contas
-   * Nota: Esta API requer agentId ou corpId
+   * Nota: Esta API requer agentId (para agências) ou corpId (para anunciantes diretos)
    */
-  async getAccounts(agentId?: number): Promise<KwaiAccount[]> {
+  async getAccounts(corpId?: number): Promise<KwaiAccount[]> {
     console.log("Chamando API do Kwai: getAccounts");
     console.log("Endpoint:", "/rest/n/mapi/report/crmAccountQueryByAgentOrCorp");
     console.log("Access Token configurado:", this.accessToken ? "Sim" : "Não");
@@ -115,9 +115,10 @@ class KwaiAPI {
     try {
       const body: any = {};
 
-      // Se agentId foi fornecido, usar ele
-      if (agentId) {
-        body.agentId = agentId;
+      // Usar corpId para anunciantes diretos
+      if (corpId) {
+        body.corpId = corpId;
+        console.log("Using corpId:", corpId);
       }
 
       console.log("Request body:", JSON.stringify(body, null, 2));

@@ -13,7 +13,7 @@
 - `KWAI_API_BASE_URL` - URL base da API do Kwai (geralmente: `https://developers.kwai.com`)
 - `KWAI_AUTH_URL` - URL de autorização OAuth (geralmente: `https://business.kwai.com/oauth/authorize`)
 - `KWAI_TOKEN_URL` - URL para trocar code por token (geralmente: `https://business.kwai.com/oauth/token`)
-- `KWAI_AGENT_ID` - ID do agente (obrigatório para buscar contas) - Exemplo: `76407091`
+- `KWAI_CORP_ID` - ID da corporação (obrigatório para anunciantes diretos buscar contas) - Exemplo: `76407091`
 
 ### Next.js
 - `NEXT_PUBLIC_APP_URL` - URL da aplicação (exemplo: `https://kwai.grupoupmidia.com.br`)
@@ -31,6 +31,8 @@ Crie um arquivo `.env.local` na raiz do projeto com todas as variáveis acima.
 
 ## Nota Importante
 
-O `KWAI_AGENT_ID` é obrigatório para buscar contas através da API `crmAccountQueryByAgentOrCorp`. 
-Você pode encontrar o Agent ID na URL do Kwai Business Center: `agentId=76407091`
+O `KWAI_CORP_ID` é obrigatório para anunciantes diretos (Direct Sale Advertiser) buscar contas através da API `crmAccountQueryByAgentOrCorp`. 
+- Para **anunciantes diretos**: use `KWAI_CORP_ID`
+- Para **agências**: use `KWAI_AGENT_ID` (não implementado no momento)
+- Você pode encontrar o Corp ID na URL do Kwai Business Center: `corpId=76407091`
 
