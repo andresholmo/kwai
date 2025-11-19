@@ -13,7 +13,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Buscar token válido
     const { data: tokenData } = await (supabase.from("kwai_tokens") as any)
       .select("*")
       .eq("user_id", user.id)
@@ -25,7 +24,8 @@ export async function POST(request: NextRequest) {
     if (!tokenData) {
       return NextResponse.json(
         {
-          error: "Token not found or expired",
+          error: "Token not found. Please reconnect.",
+          needsReconnect: true,
         },
         { status: 400 }
       );
@@ -36,12 +36,12 @@ export async function POST(request: NextRequest) {
 
     if (!accounts || accounts.length === 0) {
       return NextResponse.json({
-        success: false,
+        success: true,
         message: "Nenhuma conta encontrada",
+        accounts: [],
       });
     }
 
-    // Salvar contas no Supabase
     const accountsToInsert = accounts.map((account: any) => ({
       user_id: user.id,
       account_id: account.accountId,
@@ -53,15 +53,9 @@ export async function POST(request: NextRequest) {
       last_synced_at: new Date().toISOString(),
     }));
 
-    const { error: insertError } = await (supabase.from("kwai_accounts") as any).upsert(
-      accountsToInsert,
-      { onConflict: "account_id" }
-    );
-
-    if (insertError) {
-      console.error("Erro ao salvar:", insertError);
-      throw insertError;
-    }
+    await (supabase.from("kwai_accounts") as any).upsert(accountsToInsert, {
+      onConflict: "account_id",
+    });
 
     return NextResponse.json({
       success: true,
@@ -69,10 +63,11 @@ export async function POST(request: NextRequest) {
       accounts: accounts.map((a: any) => ({
         id: a.accountId,
         name: a.accountName,
+        currency: a.currency,
       })),
     });
   } catch (error: any) {
-    console.error("ERRO:", error);
+    console.error("Erro no sync:", error.message);
     return NextResponse.json(
       {
         error: error.message,

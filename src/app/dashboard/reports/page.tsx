@@ -106,27 +106,67 @@ export default function ReportsPage() {
 
       // Processar dados do relatório
       if (data?.data && Array.isArray(data.data)) {
-        const processed = data.data.map((item: any) => ({
-          date: item.date || item.dataTime || "",
-          impressions: item.impressions || item.showCount || 0,
-          clicks: item.clicks || item.clickCount || 0,
-          spend: item.spend || item.cost || 0,
-          conversions: item.conversions || item.convertCount || 0,
-          ctr: item.ctr || (item.clickCount && item.showCount
-            ? (item.clickCount / item.showCount) * 100
-            : 0),
-          cpc: item.cpc || (item.clickCount && item.cost
-            ? item.cost / item.clickCount
-            : 0),
-          cpm: item.cpm || (item.showCount && item.cost
-            ? (item.cost / item.showCount) * 1000
-            : 0),
-        }));
+        const processed = data.data
+          .map((item: any) => {
+            // Validar e converter data
+            let reportDate: Date;
+            try {
+              if (item.dataDate) {
+                reportDate = new Date(item.dataDate);
+                if (isNaN(reportDate.getTime())) {
+                  console.error("Data inválida:", item.dataDate);
+                  reportDate = new Date();
+                }
+              } else if (item.date) {
+                reportDate = new Date(item.date);
+                if (isNaN(reportDate.getTime())) {
+                  console.error("Data inválida:", item.date);
+                  reportDate = new Date();
+                }
+              } else if (item.dataTime) {
+                reportDate = new Date(item.dataTime);
+                if (isNaN(reportDate.getTime())) {
+                  console.error("Data inválida:", item.dataTime);
+                  reportDate = new Date();
+                }
+              } else {
+                reportDate = new Date();
+              }
+            } catch (e) {
+              console.error("Erro ao processar data:", e, item);
+              reportDate = new Date();
+            }
+
+            return {
+              date: reportDate.toISOString().split("T")[0],
+              impressions: item.impressions || item.showCount || 0,
+              clicks: item.clicks || item.clickCount || 0,
+              spend: item.spend || item.cost || 0,
+              conversions: item.conversions || item.convertCount || 0,
+              ctr:
+                item.ctr ||
+                (item.clickCount && item.showCount
+                  ? (item.clickCount / item.showCount) * 100
+                  : 0),
+              cpc:
+                item.cpc ||
+                (item.clickCount && item.cost
+                  ? item.cost / item.clickCount
+                  : 0),
+              cpm:
+                item.cpm ||
+                (item.showCount && item.cost
+                  ? (item.cost / item.showCount) * 1000
+                  : 0),
+            };
+          })
+          .filter(Boolean); // Remove nulls
         setReportData(processed);
       } else {
         setReportData([]);
       }
     } catch (err: any) {
+      console.error("Erro ao gerar relatório:", err);
       setError(err.message || "Erro ao buscar relatório");
       setReportData([]);
     } finally {
