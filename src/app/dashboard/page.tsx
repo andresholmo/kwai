@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,6 +16,7 @@ import { useKwaiConnection } from "@/hooks/useKwaiConnection";
 import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const { isConnected, accounts, loading, connect } = useKwaiConnection();
   const { toast } = useToast();
@@ -157,6 +158,27 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {!isConnected && (
+        <Card className="border-orange-200">
+          <CardHeader>
+            <CardTitle className="text-orange-900">
+              Problemas para conectar?
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600 mb-4">
+              Se o método normal não funcionar, use a conexão de emergência
+            </p>
+            <Button
+              onClick={() => router.push("/dashboard/emergency-connect")}
+              variant="outline"
+            >
+              Conexão de Emergência
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Estatísticas */}
       {isConnected && (
