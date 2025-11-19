@@ -107,11 +107,31 @@ class KwaiAPI {
    * Buscar lista de contas
    */
   async getAccounts(): Promise<KwaiAccount[]> {
-    const response = await this.client.post(
-      "/rest/n/mapi/report/crmAccountQueryByAgentOrCorp",
-      {}
-    );
-    return response.data.data?.data || [];
+    console.log("Chamando API do Kwai: getAccounts");
+    console.log("Endpoint:", "/rest/n/mapi/report/crmAccountQueryByAgentOrCorp");
+    console.log("Access Token configurado:", this.accessToken ? "Sim" : "Não");
+
+    try {
+      const response = await this.client.post(
+        "/rest/n/mapi/report/crmAccountQueryByAgentOrCorp",
+        {}
+      );
+
+      console.log("Response status:", response.status);
+      console.log("Response headers:", JSON.stringify(response.headers, null, 2));
+      console.log("Response data completo:", JSON.stringify(response.data, null, 2));
+
+      const accounts = response.data.data?.data || [];
+      console.log("Contas extraídas:", accounts.length);
+      console.log("Estrutura de dados:", JSON.stringify(accounts, null, 2));
+
+      return accounts;
+    } catch (error: any) {
+      console.error("Erro ao buscar contas:", error);
+      console.error("Erro response:", error.response?.data);
+      console.error("Erro status:", error.response?.status);
+      throw error;
+    }
   }
 
   /**

@@ -24,12 +24,22 @@ export default function DashboardPage() {
     // Verificar se voltou do OAuth
     const connected = searchParams.get("connected");
     const error = searchParams.get("error");
+    const warning = searchParams.get("warning");
 
     if (connected === "true") {
-      toast({
-        title: "Conectado com sucesso!",
-        description: "Sua conta do Kwai foi conectada ao dashboard.",
-      });
+      if (warning === "no_accounts") {
+        toast({
+          title: "Conectado com sucesso!",
+          description:
+            "Porém, nenhuma conta foi encontrada. Verifique se você tem contas ativas no Kwai Business Center.",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Conectado com sucesso!",
+          description: "Sua conta do Kwai foi conectada ao dashboard.",
+        });
+      }
     }
 
     if (error) {
