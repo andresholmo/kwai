@@ -120,33 +120,6 @@ class KwaiAPI {
     return response.data.data?.data || [];
   }
 
-  /**
-   * Buscar dados de uma campanha
-   */
-  async getCampaigns(accountId: number, params: any) {
-    const response = await this.client.post(
-      "/rest/n/mapi/campaign/dspCampaignPageQueryPerformance",
-      {
-        accountId,
-        ...params,
-      }
-    );
-    return response.data.data;
-  }
-
-  /**
-   * Criar campanha
-   */
-  async createCampaign(accountId: number, campaignData: any) {
-    const response = await this.client.post(
-      "/rest/n/mapi/campaign/dspCampaignAddPerformance",
-      {
-        accountId,
-        ...campaignData,
-      }
-    );
-    return response.data.data;
-  }
 
   /**
    * Buscar relatório de performance
@@ -171,7 +144,87 @@ class KwaiAPI {
     );
     return response.data.data;
   }
+
+  /**
+   * Listar campanhas
+   */
+  async getCampaigns(
+    accountId: number,
+    params?: {
+      pageNo?: number;
+      pageSize?: number;
+      campaignIds?: number[];
+    }
+  ) {
+    const response = await this.client.post(
+      "/rest/n/mapi/campaign/dspCampaignPageQueryPerformance",
+      {
+        accountId,
+        pageNo: params?.pageNo || 1,
+        pageSize: params?.pageSize || 20,
+        ...(params?.campaignIds && { campaignIds: params.campaignIds }),
+      }
+    );
+    return response.data.data;
+  }
+
+  /**
+   * Criar campanha
+   */
+  async createCampaign(
+    accountId: number,
+    campaignData: {
+      campaignName: string;
+      marketingGoal: number; // 1=Awareness, 2=Consideration, 3=Conversion
+      objective: number; // 1=App, 2=Website
+      campaignBudgetType?: number; // 1=Daily, 2=Lifetime
+      campaignBudget?: number; // em centavos
+    }
+  ) {
+    const response = await this.client.post(
+      "/rest/n/mapi/campaign/dspCampaignAddPerformance",
+      {
+        accountId,
+        ...campaignData,
+      }
+    );
+    return response.data.data;
+  }
+
+  /**
+   * Atualizar status da campanha (on/off)
+   */
+  async updateCampaignStatus(
+    accountId: number,
+    campaignId: number,
+    openStatus: number
+  ) {
+    const response = await this.client.post(
+      "/rest/n/mapi/campaign/dspCampaignUpdateOpenStatusPerformance",
+      {
+        accountId,
+        campaignId,
+        openStatus, // 0=Off, 1=On
+      }
+    );
+    return response.data;
+  }
+
+  /**
+   * Deletar campanha
+   */
+  async deleteCampaign(accountId: number, campaignId: number) {
+    const response = await this.client.post(
+      "/rest/n/mapi/campaign/dspCampaignDeletePerformance",
+      {
+        accountId,
+        campaignId,
+      }
+    );
+    return response.data;
+  }
 }
 
 export const kwaiAPI = new KwaiAPI();
+
 
