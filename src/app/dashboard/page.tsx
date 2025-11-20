@@ -159,6 +159,55 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
+      {isConnected && (
+        <Card className="border-green-200 bg-green-50">
+          <CardHeader>
+            <CardTitle className="text-green-900">
+              🎉 Todas as Permissões Aprovadas!
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-green-800">
+              O Kwai aprovou todas as permissões da API! Atualize o token para
+              começar a criar campanhas.
+            </p>
+            <Button
+              onClick={async () => {
+                try {
+                  const res = await fetch("/api/kwai/update-token", {
+                    method: "POST",
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    toast({
+                      title: "Token atualizado!",
+                      description:
+                        "Agora você pode criar campanhas, ad sets e fazer upload de materiais.",
+                    });
+                    setTimeout(() => window.location.reload(), 1500);
+                  } else {
+                    toast({
+                      title: "Erro",
+                      description: data.error || "Erro ao atualizar token",
+                      variant: "destructive",
+                    });
+                  }
+                } catch (error: any) {
+                  toast({
+                    title: "Erro",
+                    description: error.message || "Erro ao atualizar token",
+                    variant: "destructive",
+                  });
+                }
+              }}
+              className="w-full bg-green-600 hover:bg-green-700"
+            >
+              Atualizar Token com Novas Permissões
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {!isConnected && (
         <Card className="border-orange-200">
           <CardHeader>

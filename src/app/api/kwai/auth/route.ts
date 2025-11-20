@@ -10,7 +10,22 @@ export async function GET() {
     process.env.KWAI_REDIRECT_URI!
   );
   authUrl.searchParams.append("response_type", "code");
-  authUrl.searchParams.append("scope", "ad_mapi_report");
+
+  // TODOS os scopes aprovados
+  const scopes = [
+    "ad_mapi_report",
+    "ad_mapi_campaign_read",
+    "ad_mapi_campaign_write",
+    "ad_mapi_unit_read",
+    "ad_mapi_unit_write",
+    "ad_mapi_creative_read",
+    "ad_mapi_creative_write",
+    "ad_mapi_material_read",
+    "ad_mapi_material_write",
+    "profile_mapi_post_read",
+  ];
+
+  authUrl.searchParams.append("scope", scopes.join(" "));
 
   return NextResponse.redirect(authUrl.toString());
 }
