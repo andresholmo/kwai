@@ -75,17 +75,55 @@ export default function DashboardPage() {
       {/* Status de Conexão */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            {isConnected ? (
-              <>
-                <CheckCircle className="h-5 w-5 text-green-600" />
-                Conectado ao Kwai
-              </>
-            ) : (
-              <>
-                <AlertCircle className="h-5 w-5 text-orange-600" />
-                Não conectado ao Kwai
-              </>
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isConnected ? (
+                <>
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  Conectado ao Kwai
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="h-5 w-5 text-orange-600" />
+                  Não conectado ao Kwai
+                </>
+              )}
+            </div>
+            {isConnected && (
+              <Button
+                onClick={async () => {
+                  try {
+                    const res = await fetch("/api/kwai/refresh-token", {
+                      method: "POST",
+                    });
+                    const data = await res.json();
+
+                    if (data.success) {
+                      toast({
+                        title: "Token renovado!",
+                        description: "Seu acesso foi renovado com sucesso.",
+                      });
+                      setTimeout(() => window.location.reload(), 1000);
+                    } else {
+                      toast({
+                        title: "Erro ao renovar token",
+                        description: data.error,
+                        variant: "destructive",
+                      });
+                    }
+                  } catch (error: any) {
+                    toast({
+                      title: "Erro",
+                      description: error.message,
+                      variant: "destructive",
+                    });
+                  }
+                }}
+                variant="outline"
+                size="sm"
+              >
+                Renovar Token
+              </Button>
             )}
           </CardTitle>
         </CardHeader>

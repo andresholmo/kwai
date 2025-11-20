@@ -134,7 +134,10 @@ export async function GET(request: NextRequest) {
 
       console.log("Salvando contas no banco...");
       const { error: accountsError, data: accountsData } = await (supabase
-        .from("kwai_accounts") as any).upsert(accountsToInsert);
+        .from("kwai_accounts") as any).upsert(accountsToInsert, {
+        onConflict: "account_id",
+        ignoreDuplicates: true,
+      });
 
       if (accountsError) {
         console.error("Erro ao salvar contas:", accountsError);

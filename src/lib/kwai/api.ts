@@ -41,15 +41,23 @@ class KwaiAPI {
       (response) => {
         // Kwai retorna status 200 com data.status diferente de 200 em caso de erro
         if (response.data?.status && response.data.status !== 200) {
-          throw new Error(response.data.message || "Erro na API do Kwai");
+          return Promise.reject(response.data);
         }
         return response;
       },
-      (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          throw new Error("Token inválido ou expirado");
+      async (error: AxiosError<any>) => {
+        const originalRequest = error.config as any;
+
+        // Token expirado (401) - tentar refresh
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+
+          // Aqui seria ideal buscar o refresh_token do banco
+          // Por enquanto, apenas rejeita
+          console.error("Token expired - needs manual refresh");
         }
-        throw error;
+
+        return Promise.reject(error);
       }
     );
   }
@@ -86,6 +94,27 @@ class KwaiAPI {
   async refreshAccessToken(
     refreshToken: string
   ): Promise<KwaiTokenResponse> {
+    const response = await axios.post<KwaiTokenResponse>(
+      process.env.KWAI_TOKEN_URL!,
+      new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+        client_id: process.env.KWAI_CLIENT_ID!,
+        client_secret: process.env.KWAI_CLIENT_SECRET!,
+      }),
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      }
+    );
+    return response.data;
+  }
+
+  /**
+   * Refresh access token automaticamente
+   */
+  async refreshToken(refreshToken: string): Promise<KwaiTokenResponse> {
     const response = await axios.post<KwaiTokenResponse>(
       process.env.KWAI_TOKEN_URL!,
       new URLSearchParams({
@@ -154,12 +183,14 @@ class KwaiAPI {
       pageNo?: number;
       pageSize?: number;
       campaignIds?: number[];
+      adCategory?: number;
     }
   ) {
     const response = await this.client.post(
       "/rest/n/mapi/campaign/dspCampaignPageQueryPerformance",
       {
         accountId,
+        adCategory: params?.adCategory || 1, // 1=Entertainment, 2=E-commerce, 4=Others (obrigatório!)
         pageNo: params?.pageNo || 1,
         pageSize: params?.pageSize || 20,
         ...(params?.campaignIds && { campaignIds: params.campaignIds }),
