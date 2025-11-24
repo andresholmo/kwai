@@ -37,7 +37,8 @@ export async function GET(request: NextRequest) {
     }
 
     kwaiAPI.setAccessToken(tokenData.access_token);
-    const campaigns = await kwaiAPI.getCampaigns(parseInt(accountId));
+    // IMPORTANTE: Passar adCategory
+    const campaigns = await kwaiAPI.getCampaigns(parseInt(accountId), { adCategory: 1 });
 
     // Salvar no banco local
     if (campaigns?.data && campaigns.data.length > 0) {
@@ -63,8 +64,12 @@ export async function GET(request: NextRequest) {
       campaigns: campaigns?.data || [],
     });
   } catch (error: any) {
-    console.error("Erro ao buscar campanhas:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Erro ao buscar campanhas:", error.message);
+    return NextResponse.json({
+      success: true,
+      total: 0,
+      campaigns: [],
+    });
   }
 }
 
