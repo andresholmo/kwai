@@ -128,7 +128,16 @@ export default function DashboardPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {isConnected ? (
+          {!isConnected ? (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Você precisa conectar sua conta do Kwai para gerenciar campanhas.
+              </p>
+              <Button onClick={() => router.push("/dashboard/connect")} className="w-full">
+                Conectar ao Kwai
+              </Button>
+            </div>
+          ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-600">
@@ -184,14 +193,6 @@ export default function DashboardPage() {
                   </div>
                 ))}
               </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                Conecte sua conta do Kwai Business para começar a gerenciar suas
-                campanhas.
-              </p>
-              <Button onClick={connect}>Conectar conta do Kwai</Button>
             </div>
           )}
         </CardContent>
