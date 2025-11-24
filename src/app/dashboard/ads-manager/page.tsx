@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, RefreshCw, Search, Edit, Copy } from "lucide-react";
+import {
+  Plus,
+  RefreshCw,
+  Search,
+  Edit,
+  Copy,
+  ChevronRight,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,7 +49,7 @@ export default function AdsManagerPage() {
   const [activeTab, setActiveTab] = useState<TabType>("campaigns");
   const [accounts, setAccounts] = useState<any[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   // Dados
@@ -50,11 +57,11 @@ export default function AdsManagerPage() {
   const [adSets, setAdSets] = useState<any[]>([]);
   const [ads, setAds] = useState<any[]>([]);
 
-  // Para filtrar ad sets e anúncios
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("");
-  const [selectedAdSetId, setSelectedAdSetId] = useState<string>("");
+  // Seleção hierárquica - IMPORTANTE: manter entre abas
+  const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
+  const [selectedAdSet, setSelectedAdSet] = useState<any>(null);
 
-  // Seleção
+  // Seleção para ações em massa
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   // Filtros
@@ -70,7 +77,7 @@ export default function AdsManagerPage() {
   );
   const [editData, setEditData] = useState<any>(null);
 
-  // Buscar contas
+  // Buscar contas ao iniciar
   useEffect(() => {
     fetchAccounts();
   }, []);
@@ -79,25 +86,32 @@ export default function AdsManagerPage() {
   useEffect(() => {
     if (selectedAccount) {
       fetchCampaigns();
+      // Limpar seleções ao mudar de conta
+      setSelectedCampaign(null);
+      setSelectedAdSet(null);
+      setAdSets([]);
+      setAds([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAccount]);
 
   // Buscar ad sets quando campanha for selecionada
   useEffect(() => {
-    if (activeTab === "adsets" && selectedAccount && selectedCampaignId) {
-      fetchAdSets();
+    if (selectedCampaign) {
+      fetchAdSets(selectedCampaign.campaignId);
+      setSelectedAdSet(null);
+      setAds([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, selectedAccount, selectedCampaignId]);
+  }, [selectedCampaign]);
 
   // Buscar anúncios quando ad set for selecionado
   useEffect(() => {
-    if (activeTab === "ads" && selectedAccount && selectedAdSetId) {
-      fetchAds();
+    if (selectedAdSet) {
+      fetchAds(selectedAdSet.unitId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, selectedAccount, selectedAdSetId]);
+  }, [selectedAdSet]);
 
   const fetchAccounts = async () => {
     try {
@@ -118,17 +132,11 @@ export default function AdsManagerPage() {
       const res = await fetch(`/api/kwai/campaigns?accountId=${selectedAccount}`);
       const data = await res.json();
       if (data.success) {
-        // Remover duplicatas por campaignId
         const uniqueCampaigns = removeDuplicates(
           data.campaigns || [],
           "campaignId"
         );
         setCampaigns(uniqueCampaigns);
-
-        // Selecionar primeira campanha para ad sets
-        if (uniqueCampaigns.length > 0 && !selectedCampaignId) {
-          setSelectedCampaignId(uniqueCampaigns[0].campaignId.toString());
-        }
       }
     } catch (error) {
       console.error("Erro ao buscar campanhas:", error);
@@ -137,24 +145,16 @@ export default function AdsManagerPage() {
     }
   };
 
-  const fetchAdSets = async () => {
-    if (!selectedCampaignId) return;
-
+  const fetchAdSets = async (campaignId: number) => {
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/kwai/ad-sets?accountId=${selectedAccount}&campaignId=${selectedCampaignId}`
+        `/api/kwai/ad-sets?accountId=${selectedAccount}&campaignId=${campaignId}`
       );
       const data = await res.json();
       if (data.success) {
-        // Remover duplicatas por unitId
         const uniqueAdSets = removeDuplicates(data.adSets || [], "unitId");
         setAdSets(uniqueAdSets);
-
-        // Selecionar primeiro ad set para anúncios
-        if (uniqueAdSets.length > 0 && !selectedAdSetId) {
-          setSelectedAdSetId(uniqueAdSets[0].unitId.toString());
-        }
       }
     } catch (error) {
       console.error("Erro ao buscar ad sets:", error);
@@ -163,17 +163,14 @@ export default function AdsManagerPage() {
     }
   };
 
-  const fetchAds = async () => {
-    if (!selectedAdSetId) return;
-
+  const fetchAds = async (unitId: number) => {
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/kwai/creatives?accountId=${selectedAccount}&unitId=${selectedAdSetId}`
+        `/api/kwai/creatives?accountId=${selectedAccount}&unitId=${unitId}`
       );
       const data = await res.json();
       if (data.success) {
-        // Remover duplicatas por creativeId
         const uniqueAds = removeDuplicates(data.creatives || [], "creativeId");
         setAds(uniqueAds);
       }
@@ -184,14 +181,11 @@ export default function AdsManagerPage() {
     }
   };
 
-  // Função para remover duplicatas
   const removeDuplicates = (array: any[], key: string) => {
     const seen = new Set();
     return array.filter((item) => {
       const value = item[key];
-      if (seen.has(value)) {
-        return false;
-      }
+      if (seen.has(value)) return false;
       seen.add(value);
       return true;
     });
@@ -201,13 +195,27 @@ export default function AdsManagerPage() {
     setRefreshing(true);
     if (activeTab === "campaigns") {
       await fetchCampaigns();
-    } else if (activeTab === "adsets") {
-      await fetchAdSets();
-    } else {
-      await fetchAds();
+    } else if (activeTab === "adsets" && selectedCampaign) {
+      await fetchAdSets(selectedCampaign.campaignId);
+    } else if (activeTab === "ads" && selectedAdSet) {
+      await fetchAds(selectedAdSet.unitId);
     }
     setRefreshing(false);
     toast({ title: "Dados atualizados!" });
+  };
+
+  // Selecionar campanha e ir para ad sets
+  const handleSelectCampaign = (campaign: any) => {
+    setSelectedCampaign(campaign);
+    setActiveTab("adsets");
+    setSelectedIds(new Set());
+  };
+
+  // Selecionar ad set e ir para anúncios
+  const handleSelectAdSet = (adSet: any) => {
+    setSelectedAdSet(adSet);
+    setActiveTab("ads");
+    setSelectedIds(new Set());
   };
 
   // Toggle de status
@@ -238,9 +246,7 @@ export default function AdsManagerPage() {
       });
 
       const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.error);
-      }
+      if (!data.success) throw new Error(data.error);
 
       toast({ title: newStatus ? "Ativado!" : "Pausado!" });
 
@@ -274,10 +280,10 @@ export default function AdsManagerPage() {
     }
   };
 
-  // Seleção
+  // Seleção para ações em massa
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      const allIds = getCurrentItems().map((item) => getItemId(item));
+      const allIds = filteredItems.map((item) => getItemId(item));
       setSelectedIds(new Set(allIds));
     } else {
       setSelectedIds(new Set());
@@ -371,7 +377,8 @@ export default function AdsManagerPage() {
   };
 
   // Edição
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: any, e: React.MouseEvent) => {
+    e.stopPropagation();
     setEditType(
       activeTab === "campaigns"
         ? "campaign"
@@ -413,19 +420,15 @@ export default function AdsManagerPage() {
       if (!result.success) throw new Error(result.error);
 
       toast({ title: "Salvo com sucesso!" });
-
-      // Refresh
-      if (editType === "campaign") fetchCampaigns();
-      else if (editType === "adset") fetchAdSets();
-      else fetchAds();
+      handleRefresh();
     } catch (error: any) {
       toast({ title: `Erro: ${error.message}`, variant: "destructive" });
       throw error;
     }
   };
 
-  // Duplicar individual
-  const handleDuplicate = async (campaignId: number) => {
+  const handleDuplicate = async (campaignId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
     try {
       const res = await fetch("/api/kwai/campaigns/duplicate", {
         method: "POST",
@@ -446,41 +449,34 @@ export default function AdsManagerPage() {
   };
 
   // Helpers
-  const getCurrentItems = () => {
-    switch (activeTab) {
-      case "campaigns":
-        return campaigns;
-      case "adsets":
-        return adSets;
-      case "ads":
-        return ads;
-      default:
-        return [];
-    }
-  };
+  const getItemId = (item: any): number =>
+    item.campaignId || item.unitId || item.creativeId;
 
-  const getItemId = (item: any): number => {
-    return item.campaignId || item.unitId || item.creativeId;
-  };
+  const getItemName = (item: any): string =>
+    item.campaignName || item.unitName || item.creativeName || "Sem nome";
 
-  const getItemName = (item: any): string => {
-    return item.campaignName || item.unitName || item.creativeName || "Sem nome";
-  };
-
-  const getItemStatus = (item: any): "active" | "paused" => {
-    return item.openStatus === 1 ? "active" : "paused";
-  };
+  const getItemStatus = (item: any): "active" | "paused" =>
+    item.openStatus === 1 ? "active" : "paused";
 
   // Filtrar itens
-  const filteredItems = getCurrentItems().filter((item) => {
-    const name = getItemName(item).toLowerCase();
-    const matchesSearch = name.includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" ||
-      (statusFilter === "active" && item.openStatus === 1) ||
-      (statusFilter === "paused" && item.openStatus !== 1);
-    return matchesSearch && matchesStatus;
-  });
+  const filteredItems = useMemo(() => {
+    const items =
+      activeTab === "campaigns"
+        ? campaigns
+        : activeTab === "adsets"
+        ? adSets
+        : ads;
+
+    return items.filter((item) => {
+      const name = getItemName(item).toLowerCase();
+      const matchesSearch = name.includes(searchQuery.toLowerCase());
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && item.openStatus === 1) ||
+        (statusFilter === "paused" && item.openStatus !== 1);
+      return matchesSearch && matchesStatus;
+    });
+  }, [activeTab, campaigns, adSets, ads, searchQuery, statusFilter]);
 
   const allSelected =
     filteredItems.length > 0 &&
@@ -491,10 +487,54 @@ export default function AdsManagerPage() {
     setActiveTab(tab as TabType);
     setSelectedIds(new Set());
     setSearchQuery("");
+  };
 
-    if (tab === "adsets" && campaigns.length > 0 && !selectedCampaignId) {
-      setSelectedCampaignId(campaigns[0].campaignId.toString());
-    }
+  // Breadcrumb
+  const renderBreadcrumb = () => {
+    return (
+      <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+        <button
+          onClick={() => {
+            setActiveTab("campaigns");
+            setSelectedCampaign(null);
+            setSelectedAdSet(null);
+          }}
+          className={`hover:text-blue-600 ${
+            !selectedCampaign ? "font-semibold text-gray-900" : ""
+          }`}
+        >
+          Campanhas
+        </button>
+
+        {selectedCampaign && (
+          <>
+            <ChevronRight className="h-4 w-4" />
+            <button
+              onClick={() => {
+                setActiveTab("adsets");
+                setSelectedAdSet(null);
+              }}
+              className={`hover:text-blue-600 ${
+                activeTab === "adsets" && !selectedAdSet
+                  ? "font-semibold text-gray-900"
+                  : ""
+              }`}
+            >
+              {selectedCampaign.campaignName}
+            </button>
+          </>
+        )}
+
+        {selectedAdSet && (
+          <>
+            <ChevronRight className="h-4 w-4" />
+            <span className="font-semibold text-gray-900">
+              {selectedAdSet.unitName}
+            </span>
+          </>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -521,20 +561,17 @@ export default function AdsManagerPage() {
           }
         >
           <Plus className="mr-2 h-4 w-4" />
-          Criar{" "}
-          {activeTab === "campaigns"
-            ? "Campanha"
-            : activeTab === "adsets"
-            ? "Conjunto"
-            : "Anúncio"}
+          Criar
         </Button>
       </div>
+
+      {/* Breadcrumb */}
+      {renderBreadcrumb()}
 
       {/* Filtros */}
       <Card>
         <CardContent className="py-4">
           <div className="flex items-center gap-4 flex-wrap">
-            {/* Conta */}
             <Select value={selectedAccount} onValueChange={setSelectedAccount}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Conta" />
@@ -551,51 +588,6 @@ export default function AdsManagerPage() {
               </SelectContent>
             </Select>
 
-            {/* Filtro de campanha para ad sets */}
-            {activeTab === "adsets" && (
-              <Select
-                value={selectedCampaignId}
-                onValueChange={setSelectedCampaignId}
-              >
-                <SelectTrigger className="w-[250px]">
-                  <SelectValue placeholder="Selecione a campanha" />
-                </SelectTrigger>
-                <SelectContent>
-                  {campaigns.map((campaign) => (
-                    <SelectItem
-                      key={campaign.campaignId}
-                      value={campaign.campaignId.toString()}
-                    >
-                      {campaign.campaignName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {/* Filtro de ad set para anúncios */}
-            {activeTab === "ads" && (
-              <Select
-                value={selectedAdSetId}
-                onValueChange={setSelectedAdSetId}
-              >
-                <SelectTrigger className="w-[250px]">
-                  <SelectValue placeholder="Selecione o conjunto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {adSets.map((adSet) => (
-                    <SelectItem
-                      key={adSet.unitId}
-                      value={adSet.unitId.toString()}
-                    >
-                      {adSet.unitName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-
-            {/* Busca */}
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -606,7 +598,6 @@ export default function AdsManagerPage() {
               />
             </div>
 
-            {/* Status Filter */}
             <Select
               value={statusFilter}
               onValueChange={(v: any) => setStatusFilter(v)}
@@ -621,7 +612,6 @@ export default function AdsManagerPage() {
               </SelectContent>
             </Select>
 
-            {/* Refresh */}
             <Button
               variant="outline"
               size="icon"
@@ -640,25 +630,30 @@ export default function AdsManagerPage() {
       <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList>
           <TabsTrigger value="campaigns">
-            Campanhas
-            <span className="ml-2 text-xs bg-gray-200 px-2 py-0.5 rounded-full">
-              {campaigns.length}
-            </span>
+            Campanhas ({campaigns.length})
           </TabsTrigger>
-          <TabsTrigger value="adsets">
-            Conjuntos
-            <span className="ml-2 text-xs bg-gray-200 px-2 py-0.5 rounded-full">
-              {adSets.length}
-            </span>
+          <TabsTrigger value="adsets" disabled={!selectedCampaign}>
+            Conjuntos ({adSets.length})
           </TabsTrigger>
-          <TabsTrigger value="ads">
-            Anúncios
-            <span className="ml-2 text-xs bg-gray-200 px-2 py-0.5 rounded-full">
-              {ads.length}
-            </span>
+          <TabsTrigger value="ads" disabled={!selectedAdSet}>
+            Anúncios ({ads.length})
           </TabsTrigger>
         </TabsList>
       </Tabs>
+
+      {/* Mensagem de contexto */}
+      {activeTab === "adsets" && !selectedCampaign && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800">
+          Selecione uma campanha na lista abaixo para ver seus conjuntos de
+          anúncios.
+        </div>
+      )}
+
+      {activeTab === "ads" && !selectedAdSet && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800">
+          Selecione um conjunto de anúncios para ver os anúncios.
+        </div>
+      )}
 
       {/* Bulk Actions */}
       <BulkActions
@@ -687,8 +682,7 @@ export default function AdsManagerPage() {
                 <TableHead>Entrega</TableHead>
                 {activeTab === "campaigns" && <TableHead>Orçamento</TableHead>}
                 {activeTab === "adsets" && <TableHead>Bid</TableHead>}
-                {activeTab === "adsets" && <TableHead>Orçamento Diário</TableHead>}
-                <TableHead className="w-24">Ações</TableHead>
+                <TableHead className="w-32">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -711,21 +705,17 @@ export default function AdsManagerPage() {
                       <Skeleton className="h-4 w-20" />
                     </TableCell>
                     <TableCell>
-                      <Skeleton className="h-8 w-20" />
+                      <Skeleton className="h-8 w-24" />
                     </TableCell>
                   </TableRow>
                 ))
               ) : filteredItems.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={6}
                     className="text-center py-12 text-gray-500"
                   >
-                    {activeTab === "adsets" && !selectedCampaignId
-                      ? "Selecione uma campanha para ver os conjuntos"
-                      : activeTab === "ads" && !selectedAdSetId
-                      ? "Selecione um conjunto para ver os anúncios"
-                      : searchQuery
+                    {searchQuery
                       ? "Nenhum resultado encontrado"
                       : "Nenhum item para exibir"}
                   </TableCell>
@@ -737,9 +727,19 @@ export default function AdsManagerPage() {
                   return (
                     <TableRow
                       key={id}
-                      className={selectedIds.has(id) ? "bg-blue-50" : ""}
+                      className={`${
+                        selectedIds.has(id) ? "bg-blue-50" : ""
+                      } ${
+                        activeTab !== "ads" ? "cursor-pointer hover:bg-gray-50" : ""
+                      }`}
+                      onClick={() => {
+                        if (activeTab === "campaigns")
+                          handleSelectCampaign(item);
+                        else if (activeTab === "adsets")
+                          handleSelectAdSet(item);
+                      }}
                     >
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedIds.has(id)}
                           onCheckedChange={(checked) =>
@@ -747,7 +747,7 @@ export default function AdsManagerPage() {
                           }
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <StatusToggle
                           isActive={item.openStatus === 1}
                           onToggle={(newStatus) =>
@@ -764,9 +764,18 @@ export default function AdsManagerPage() {
                         />
                       </TableCell>
                       <TableCell>
-                        <div>
-                          <div className="font-medium">{getItemName(item)}</div>
-                          <div className="text-xs text-gray-500">ID: {id}</div>
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <div className="font-medium">
+                              {getItemName(item)}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              ID: {id}
+                            </div>
+                          </div>
+                          {activeTab !== "ads" && (
+                            <ChevronRight className="h-4 w-4 text-gray-400 ml-auto" />
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -787,23 +796,14 @@ export default function AdsManagerPage() {
                         </TableCell>
                       )}
                       {activeTab === "adsets" && (
-                        <>
-                          <TableCell>
-                            {formatCurrencyBRL(item.bid)}
-                          </TableCell>
-                          <TableCell>
-                            {item.dayBudget
-                              ? formatCurrencyBRL(item.dayBudget)
-                              : "Sem limite"}
-                          </TableCell>
-                        </>
+                        <TableCell>{formatCurrencyBRL(item.bid)}</TableCell>
                       )}
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleEdit(item)}
+                            onClick={(e) => handleEdit(item, e)}
                             title="Editar"
                           >
                             <Edit className="h-4 w-4" />
@@ -812,7 +812,7 @@ export default function AdsManagerPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleDuplicate(id)}
+                              onClick={(e) => handleDuplicate(id, e)}
                               title="Duplicar"
                             >
                               <Copy className="h-4 w-4" />
@@ -830,15 +830,13 @@ export default function AdsManagerPage() {
       </Card>
 
       {/* Footer */}
-      <div className="flex items-center justify-between text-sm text-gray-500">
-        <span>
-          Mostrando {filteredItems.length}{" "}
-          {activeTab === "campaigns"
-            ? "campanha(s)"
-            : activeTab === "adsets"
-            ? "conjunto(s)"
-            : "anúncio(s)"}
-        </span>
+      <div className="text-sm text-gray-500">
+        Mostrando {filteredItems.length}{" "}
+        {activeTab === "campaigns"
+          ? "campanha(s)"
+          : activeTab === "adsets"
+          ? "conjunto(s)"
+          : "anúncio(s)"}
       </div>
 
       {/* Edit Sheet */}
