@@ -5,45 +5,58 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(value: number, currency: string = "USD") {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-  }).format(value);
-}
-
 /**
  * Formata valor para moeda brasileira
- * NOTA: API do Kwai já retorna valores em reais (não centavos)
+ * A API do Kwai retorna valores em REAIS (ex: 0.07)
+ * NÃO multiplicar nem dividir - apenas formatar
  */
-export function formatCurrencyBRL(value: number | null | undefined): string {
-  if (value === null || value === undefined) return "-";
-  return `R$ ${value.toLocaleString("pt-BR", {
+export function formatCurrencyBRL(
+  value: number | string | null | undefined
+): string {
+  if (value === null || value === undefined || value === "") return "-";
+
+  // Converter para número se for string
+  const numValue = typeof value === "string" ? parseFloat(value) : value;
+
+  // Se não for número válido
+  if (isNaN(numValue)) return "-";
+
+  // Formatar diretamente - SEM multiplicar ou dividir
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })}`;
+  }).format(numValue);
 }
 
 /**
- * Formata número com separador pt-BR
+ * Formata número com separador brasileiro
  */
 export function formatNumberPT(value: number | null | undefined): string {
   if (value === null || value === undefined) return "-";
-  return value.toLocaleString("pt-BR");
+  return new Intl.NumberFormat("pt-BR").format(value);
 }
 
 /**
- * Converte valor em reais para centavos (para enviar à API)
+ * Converte valor em reais para centavos (para enviar à API se necessário)
  */
 export function toCents(valueInReais: number): number {
   return Math.round(valueInReais * 100);
 }
 
 /**
- * Converte centavos para reais
+ * Converte centavos para reais (use apenas se souber que o valor está em centavos)
  */
 export function toReais(valueInCents: number): number {
   return valueInCents / 100;
+}
+
+export function formatCurrency(value: number, currency: string = "USD") {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+  }).format(value);
 }
 
 export function formatNumber(value: number) {
@@ -67,4 +80,3 @@ export function formatDateTime(date: Date | string) {
     minute: "2-digit",
   }).format(new Date(date));
 }
-

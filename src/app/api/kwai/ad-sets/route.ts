@@ -42,6 +42,14 @@ export async function GET(request: NextRequest) {
       parseInt(campaignId)
     );
 
+    // Log para debug - mostrar exatamente o que a API retorna
+    if (adSets?.data && adSets.data.length > 0) {
+      console.log(
+        "Ad Sets raw data:",
+        JSON.stringify(adSets.data[0], null, 2)
+      );
+    }
+
     return NextResponse.json({
       success: true,
       total: adSets?.total || 0,
