@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { APP_VERSION, BUILD_DATE } from "@/lib/version";
 import {
   LayoutDashboard,
   Megaphone,
@@ -82,6 +83,12 @@ export function Sidebar() {
           );
         })}
       </nav>
+      <div className="border-t p-4">
+        <div className="flex justify-between text-xs text-gray-400">
+          <span>v{APP_VERSION}</span>
+          <span>{BUILD_DATE}</span>
+        </div>
+      </div>
     </div>
   );
 }

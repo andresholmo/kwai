@@ -13,21 +13,22 @@ export function formatCurrency(value: number, currency: string = "USD") {
 }
 
 /**
- * Formata valor de centavos para moeda brasileira
+ * Formata valor para moeda brasileira
+ * NOTA: API do Kwai já retorna valores em reais (não centavos)
  */
-export function formatCurrencyBRL(valueInCents: number): string {
-  if (!valueInCents && valueInCents !== 0) return "-";
-  return `R$ ${(valueInCents / 100).toLocaleString("pt-BR", {
+export function formatCurrencyBRL(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "-";
+  return `R$ ${value.toLocaleString("pt-BR", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 }
 
 /**
- * Formata número grande com separador de milhar
+ * Formata número com separador pt-BR
  */
-export function formatNumberPT(value: number): string {
-  if (!value && value !== 0) return "-";
+export function formatNumberPT(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "-";
   return value.toLocaleString("pt-BR");
 }
 
