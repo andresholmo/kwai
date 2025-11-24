@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { formatCurrencyBRL } from "@/lib/utils";
 
 export default function CampaignsPage() {
   const router = useRouter();
@@ -155,9 +156,7 @@ export default function CampaignsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {campaign.campaignBudget
-                        ? `R$ ${(campaign.campaignBudget / 100).toFixed(2)}`
-                        : "-"}
+                      {formatCurrencyBRL(campaign.campaignBudget)}
                     </TableCell>
                     <TableCell>
                       <Button variant="ghost" size="sm">

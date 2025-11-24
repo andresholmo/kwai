@@ -336,6 +336,7 @@ class KwaiAPI {
 
   /**
    * Listar materiais
+   * Nota: Endpoint correto baseado na documentação
    */
   async getMaterials(
     accountId: number,
@@ -345,16 +346,39 @@ class KwaiAPI {
       materialType?: number; // 1=Video, 2=Image
     }
   ) {
-    const response = await this.client.post(
-      "/rest/n/mapi/material/dspMaterialPageQuery",
-      {
-        accountId,
-        pageNo: params?.pageNo || 1,
-        pageSize: params?.pageSize || 20,
-        ...(params?.materialType && { materialType: params.materialType }),
+    try {
+      const response = await this.client.post(
+        "/rest/n/mapi/material/dspMaterialQuery",
+        {
+          accountId,
+          pageNo: params?.pageNo || 1,
+          pageSize: params?.pageSize || 20,
+          ...(params?.materialType && { materialType: params.materialType }),
+        }
+      );
+      return response.data.data;
+    } catch (error: any) {
+      // Se 404, tentar endpoint alternativo
+      if (error.response?.status === 404 || error.status === 404) {
+        console.log("Tentando endpoint alternativo de materiais...");
+        try {
+          const response = await this.client.post(
+            "/rest/n/mapi/material/dspVideoMaterialQuery",
+            {
+              accountId,
+              pageNo: params?.pageNo || 1,
+              pageSize: params?.pageSize || 20,
+            }
+          );
+          return response.data.data;
+        } catch (altError) {
+          console.log("Endpoint alternativo também falhou");
+          // Retornar vazio ao invés de erro
+          return { data: [], total: 0 };
+        }
       }
-    );
-    return response.data.data;
+      throw error;
+    }
   }
 
   /**

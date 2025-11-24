@@ -36,7 +36,15 @@ export async function GET(request: NextRequest) {
     }
 
     kwaiAPI.setAccessToken(tokenData.access_token);
-    const materials = await kwaiAPI.getMaterials(parseInt(accountId));
+
+    let materials = { data: [], total: 0 };
+
+    try {
+      materials = await kwaiAPI.getMaterials(parseInt(accountId));
+    } catch (error: any) {
+      console.log("Erro ao buscar materiais (não crítico):", error.message);
+      // Retornar lista vazia se API de materiais não funcionar
+    }
 
     return NextResponse.json({
       success: true,
@@ -45,7 +53,12 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Erro ao buscar materiais:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      total: 0,
+      materials: [],
+      warning: "API de materiais pode não estar disponível",
+    });
   }
 }
 

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { formatCurrencyBRL } from "@/lib/utils";
 
 export default function AdSetsPage() {
   const router = useRouter();
@@ -197,8 +198,8 @@ export default function AdSetsPage() {
                         {adSet.openStatus === 1 ? "Ativo" : "Pausado"}
                       </Badge>
                     </TableCell>
-                    <TableCell>R$ {(adSet.bid / 100).toFixed(2)}</TableCell>
-                    <TableCell>R$ {(adSet.unitBudget / 100).toFixed(2)}</TableCell>
+                    <TableCell>{formatCurrencyBRL(adSet.bid)}</TableCell>
+                    <TableCell>{formatCurrencyBRL(adSet.unitBudget)}</TableCell>
                     <TableCell>
                       <Button variant="ghost" size="sm">
                         Ver Criativos
