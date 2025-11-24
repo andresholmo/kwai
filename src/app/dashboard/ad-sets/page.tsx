@@ -21,7 +21,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, RefreshCw, Search, Pause, Play, Filter, X } from "lucide-react";
+import {
+  Plus,
+  RefreshCw,
+  Search,
+  Pause,
+  Play,
+  Filter,
+  X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatCurrencyBRL } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -43,6 +54,10 @@ export default function AdSetsPage() {
 
   // Seleção
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  // Ordenação
+  const [sortField, setSortField] = useState<string>("unitName");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
     fetchAccounts();
@@ -104,9 +119,29 @@ export default function AdSetsPage() {
     }
   };
 
-  // Ad Sets filtrados
+  // Função de ordenação
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortField !== field)
+      return <ArrowUpDown className="ml-1 h-4 w-4 text-gray-300" />;
+    return sortDirection === "asc" ? (
+      <ArrowUp className="ml-1 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-1 h-4 w-4" />
+    );
+  };
+
+  // Ad Sets filtrados e ordenados
   const filteredAdSets = useMemo(() => {
-    return adSets.filter((adSet) => {
+    let result = adSets.filter((adSet) => {
       const matchesSearch =
         searchTerm === "" ||
         adSet.unitName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -118,7 +153,34 @@ export default function AdSetsPage() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [adSets, searchTerm, statusFilter]);
+
+    // Ordenação
+    result.sort((a, b) => {
+      let aValue: any = a[sortField as keyof typeof a];
+      let bValue: any = b[sortField as keyof typeof b];
+
+      if (typeof aValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue?.toLowerCase() || "";
+      }
+
+      if (
+        typeof aValue === "number" ||
+        sortField === "bid" ||
+        sortField === "dayBudget" ||
+        sortField === "unitBudget"
+      ) {
+        aValue = aValue || 0;
+        bValue = bValue || 0;
+      }
+
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [adSets, searchTerm, statusFilter, sortField, sortDirection]);
 
   const toggleSelection = (unitId: number) => {
     const newSelected = new Set(selectedIds);
@@ -388,11 +450,51 @@ export default function AdSetsPage() {
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Otimização</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Bid</TableHead>
-                  <TableHead>Budget</TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleSort("unitName")}
+                  >
+                    <div className="flex items-center">
+                      Nome
+                      <SortIcon field="unitName" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleSort("optimizeTarget")}
+                  >
+                    <div className="flex items-center">
+                      Otimização
+                      <SortIcon field="optimizeTarget" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleSort("openStatus")}
+                  >
+                    <div className="flex items-center">
+                      Status
+                      <SortIcon field="openStatus" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleSort("bid")}
+                  >
+                    <div className="flex items-center">
+                      Bid
+                      <SortIcon field="bid" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleSort("dayBudget")}
+                  >
+                    <div className="flex items-center">
+                      Budget
+                      <SortIcon field="dayBudget" />
+                    </div>
+                  </TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>

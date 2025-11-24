@@ -29,6 +29,9 @@ import {
   Play,
   Filter,
   X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatCurrencyBRL } from "@/lib/utils";
@@ -49,6 +52,10 @@ export default function CampaignsPage() {
 
   // Seleção
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  // Ordenação
+  const [sortField, setSortField] = useState<string>("campaignName");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   useEffect(() => {
     fetchAccounts();
@@ -94,9 +101,29 @@ export default function CampaignsPage() {
     }
   };
 
-  // Campanhas filtradas
+  // Função de ordenação
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("asc");
+    }
+  };
+
+  const SortIcon = ({ field }: { field: string }) => {
+    if (sortField !== field)
+      return <ArrowUpDown className="ml-1 h-4 w-4 text-gray-300" />;
+    return sortDirection === "asc" ? (
+      <ArrowUp className="ml-1 h-4 w-4" />
+    ) : (
+      <ArrowDown className="ml-1 h-4 w-4" />
+    );
+  };
+
+  // Campanhas filtradas e ordenadas
   const filteredCampaigns = useMemo(() => {
-    return campaigns.filter((campaign) => {
+    let result = campaigns.filter((campaign) => {
       // Filtro por nome
       const matchesSearch =
         searchTerm === "" ||
@@ -110,7 +137,31 @@ export default function CampaignsPage() {
 
       return matchesSearch && matchesStatus;
     });
-  }, [campaigns, searchTerm, statusFilter]);
+
+    // Ordenação
+    result.sort((a, b) => {
+      let aValue: any = a[sortField as keyof typeof a];
+      let bValue: any = b[sortField as keyof typeof b];
+
+      // Para strings
+      if (typeof aValue === "string") {
+        aValue = aValue.toLowerCase();
+        bValue = bValue?.toLowerCase() || "";
+      }
+
+      // Para números
+      if (typeof aValue === "number" || sortField === "campaignBudget") {
+        aValue = aValue || 0;
+        bValue = bValue || 0;
+      }
+
+      if (aValue < bValue) return sortDirection === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [campaigns, searchTerm, statusFilter, sortField, sortDirection]);
 
   // Toggle seleção individual
   const toggleSelection = (campaignId: number) => {
@@ -364,10 +415,42 @@ export default function CampaignsPage() {
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Objetivo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Budget</TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleSort("campaignName")}
+                  >
+                    <div className="flex items-center">
+                      Nome
+                      <SortIcon field="campaignName" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleSort("objective")}
+                  >
+                    <div className="flex items-center">
+                      Objetivo
+                      <SortIcon field="objective" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleSort("openStatus")}
+                  >
+                    <div className="flex items-center">
+                      Status
+                      <SortIcon field="openStatus" />
+                    </div>
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer hover:bg-gray-50"
+                    onClick={() => handleSort("campaignBudget")}
+                  >
+                    <div className="flex items-center">
+                      Budget
+                      <SortIcon field="campaignBudget" />
+                    </div>
+                  </TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>

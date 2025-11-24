@@ -39,6 +39,14 @@ export async function GET(request: NextRequest) {
     kwaiAPI.setAccessToken(tokenData.access_token);
     const creatives = await kwaiAPI.getCreatives(parseInt(accountId), parseInt(unitId));
 
+    // Log para debug
+    if (creatives?.data?.length > 0) {
+      console.log(
+        "Exemplo de criativo:",
+        JSON.stringify(creatives.data[0], null, 2)
+      );
+    }
+
     return NextResponse.json({
       success: true,
       total: creatives?.total || 0,
