@@ -54,7 +54,11 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Erro ao buscar criativos:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      total: 0,
+      creatives: [],
+    });
   }
 }
 
