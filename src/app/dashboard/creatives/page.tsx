@@ -302,7 +302,14 @@ export default function CreativesPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCreative(creative);
+                          setDetailsOpen(true);
+                        }}
+                      >
                         Ver Detalhes
                       </Button>
                     </TableCell>

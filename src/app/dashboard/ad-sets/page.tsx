@@ -95,7 +95,9 @@ export default function AdSetsPage() {
 
   const toggleAdSetStatus = async (unitId: number, currentStatus: number) => {
     try {
-      const newStatus = currentStatus === 1 ? 0 : 1;
+      // API do Kwai: 1 = Ativo, 2 = Pausado
+      const newStatus = currentStatus === 1 ? 2 : 1;
+
       const res = await fetch("/api/kwai/ad-sets/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -107,14 +109,15 @@ export default function AdSetsPage() {
       });
 
       const data = await res.json();
-      if (data.success) {
-        toast({
-          title: newStatus === 1 ? "Ad Set ativado!" : "Ad Set pausado!",
-        });
-        fetchAdSets(); // Recarregar lista
-      } else {
-        throw new Error(data.error);
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Erro ao atualizar status");
       }
+
+      toast({
+        title: newStatus === 1 ? "✅ Ad Set ativado!" : "⏸️ Ad Set pausado!",
+      });
+      fetchAdSets(); // Recarregar lista
     } catch (error: any) {
       toast({
         title: "Erro",
