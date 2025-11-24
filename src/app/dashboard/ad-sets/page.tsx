@@ -22,9 +22,11 @@ import {
 import { Plus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatCurrencyBRL } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function AdSetsPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>("");
@@ -88,6 +90,37 @@ export default function AdSetsPage() {
       console.error("Erro:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleAdSetStatus = async (unitId: number, currentStatus: number) => {
+    try {
+      const newStatus = currentStatus === 1 ? 0 : 1;
+      const res = await fetch("/api/kwai/ad-sets/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId: parseInt(selectedAccount),
+          unitId,
+          openStatus: newStatus,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          title: newStatus === 1 ? "Ad Set ativado!" : "Ad Set pausado!",
+        });
+        fetchAdSets(); // Recarregar lista
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -201,9 +234,17 @@ export default function AdSetsPage() {
                     <TableCell>{formatCurrencyBRL(adSet.bid)}</TableCell>
                     <TableCell>{formatCurrencyBRL(adSet.unitBudget)}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">
-                        Ver Criativos
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            toggleAdSetStatus(adSet.unitId, adSet.openStatus)
+                          }
+                        >
+                          {adSet.openStatus === 1 ? "Pausar" : "Ativar"}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

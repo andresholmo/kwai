@@ -22,9 +22,11 @@ import {
 import { Plus, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { formatCurrencyBRL } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function CampaignsPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>("");
   const [campaigns, setCampaigns] = useState<any[]>([]);
@@ -72,6 +74,37 @@ export default function CampaignsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAccount]);
+
+  const toggleCampaignStatus = async (campaignId: number, currentStatus: number) => {
+    try {
+      const newStatus = currentStatus === 1 ? 0 : 1;
+      const res = await fetch("/api/kwai/campaigns/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId: parseInt(selectedAccount),
+          campaignId,
+          openStatus: newStatus,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast({
+          title: newStatus === 1 ? "Campanha ativada!" : "Campanha pausada!",
+        });
+        fetchCampaigns(); // Recarregar lista
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -159,9 +192,17 @@ export default function CampaignsPage() {
                       {formatCurrencyBRL(campaign.campaignBudget)}
                     </TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">
-                        Ver Detalhes
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            toggleCampaignStatus(campaign.campaignId, campaign.openStatus)
+                          }
+                        >
+                          {campaign.openStatus === 1 ? "Pausar" : "Ativar"}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
