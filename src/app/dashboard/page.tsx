@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ export default function DashboardPage() {
   const searchParams = useSearchParams();
   const { isConnected, accounts, loading, connect } = useKwaiConnection();
   const { toast } = useToast();
+  const [tokenInfo, setTokenInfo] = useState<{ minutesRemaining: number } | null>(null);
 
   useEffect(() => {
     // Verificar se voltou do OAuth
@@ -51,6 +52,27 @@ export default function DashboardPage() {
       });
     }
   }, [searchParams, toast]);
+
+  useEffect(() => {
+    const checkToken = async () => {
+      try {
+        const res = await fetch("/api/kwai/check-token");
+        const data = await res.json();
+        if (data.connected) {
+          setTokenInfo({ minutesRemaining: data.minutesRemaining });
+        }
+      } catch (error) {
+        console.error("Erro:", error);
+      }
+    };
+
+    if (isConnected) {
+      checkToken();
+      const interval = setInterval(checkToken, 60000); // Atualizar a cada minuto
+
+      return () => clearInterval(interval);
+    }
+  }, [isConnected]);
 
   if (loading) {
     return (
@@ -140,9 +162,21 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">
-                  {accounts.length} conta(s) sincronizada(s)
-                </p>
+                <div>
+                  <p className="text-sm text-gray-600">
+                    {accounts.length} conta(s) sincronizada(s)
+                  </p>
+                  {tokenInfo && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Token expira em {tokenInfo.minutesRemaining} minutos
+                      {tokenInfo.minutesRemaining <= 10 && (
+                        <span className="text-orange-600 ml-1">
+                          (renovando automaticamente...)
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
                 <Button
                   onClick={async () => {
                     try {
