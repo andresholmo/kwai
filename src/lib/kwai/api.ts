@@ -254,6 +254,181 @@ class KwaiAPI {
     );
     return response.data;
   }
+
+  // ========== AD SETS (UNITS) ==========
+
+  /**
+   * Listar Ad Sets de uma campanha
+   */
+  async getAdSets(
+    accountId: number,
+    campaignId: number,
+    params?: {
+      pageNo?: number;
+      pageSize?: number;
+    }
+  ) {
+    const response = await this.client.post(
+      "/rest/n/mapi/unit/dspUnitPageQueryPerformance",
+      {
+        accountId,
+        campaignId,
+        adCategory: 1,
+        pageNo: params?.pageNo || 1,
+        pageSize: params?.pageSize || 20,
+      }
+    );
+    return response.data.data;
+  }
+
+  /**
+   * Criar Ad Set
+   */
+  async createAdSet(
+    accountId: number,
+    adSetData: {
+      campaignId: number;
+      unitName: string;
+      optimizeTarget: number; // 1=Click, 2=Impression, 3=Conversion
+      bidType: number; // 1=CPC, 2=CPM, 3=oCPC
+      bid: number; // em centavos
+      unitBudget: number; // em centavos
+      scheduleStartTime: string; // formato: "2024-01-01 00:00:00"
+      scheduleEndTime?: string;
+      // Targeting
+      region?: number[]; // IDs de regiões
+      gender?: number; // 0=All, 1=Male, 2=Female
+      ageMin?: number;
+      ageMax?: number;
+    }
+  ) {
+    const response = await this.client.post(
+      "/rest/n/mapi/unit/dspUnitAddPerformance",
+      {
+        accountId,
+        adCategory: 1,
+        ...adSetData,
+      }
+    );
+    return response.data.data;
+  }
+
+  /**
+   * Atualizar status do Ad Set
+   */
+  async updateAdSetStatus(
+    accountId: number,
+    unitId: number,
+    openStatus: number
+  ) {
+    const response = await this.client.post(
+      "/rest/n/mapi/unit/dspUnitUpdateOpenStatusPerformance",
+      {
+        accountId,
+        unitId,
+        openStatus, // 0=Off, 1=On
+      }
+    );
+    return response.data;
+  }
+
+  // ========== MATERIAIS ==========
+
+  /**
+   * Listar materiais
+   */
+  async getMaterials(
+    accountId: number,
+    params?: {
+      pageNo?: number;
+      pageSize?: number;
+      materialType?: number; // 1=Video, 2=Image
+    }
+  ) {
+    const response = await this.client.post(
+      "/rest/n/mapi/material/dspMaterialPageQuery",
+      {
+        accountId,
+        pageNo: params?.pageNo || 1,
+        pageSize: params?.pageSize || 20,
+        ...(params?.materialType && { materialType: params.materialType }),
+      }
+    );
+    return response.data.data;
+  }
+
+  /**
+   * Upload de material (vídeo/imagem)
+   * Nota: Para vídeos grandes, usar upload fragmentado
+   */
+  async uploadMaterial(
+    accountId: number,
+    materialData: {
+      materialType: number; // 1=Video, 2=Image
+      materialName: string;
+      url: string; // URL do arquivo
+    }
+  ) {
+    const response = await this.client.post(
+      "/rest/n/mapi/material/dspMaterialAdd",
+      {
+        accountId,
+        ...materialData,
+      }
+    );
+    return response.data.data;
+  }
+
+  // ========== CRIATIVOS ==========
+
+  /**
+   * Listar criativos
+   */
+  async getCreatives(
+    accountId: number,
+    unitId: number,
+    params?: {
+      pageNo?: number;
+      pageSize?: number;
+    }
+  ) {
+    const response = await this.client.post(
+      "/rest/n/mapi/creative/dspCreativePageQueryPerformance",
+      {
+        accountId,
+        unitId,
+        adCategory: 1,
+        pageNo: params?.pageNo || 1,
+        pageSize: params?.pageSize || 20,
+      }
+    );
+    return response.data.data;
+  }
+
+  /**
+   * Criar criativo
+   */
+  async createCreative(
+    accountId: number,
+    creativeData: {
+      unitId: number;
+      creativeName: string;
+      materialId: number;
+      actionType: number; // 1=Learn More, 2=Download, etc
+      actionUrl: string; // URL de destino
+      description?: string;
+    }
+  ) {
+    const response = await this.client.post(
+      "/rest/n/mapi/creative/dspCreativeAddPerformance",
+      {
+        accountId,
+        adCategory: 1,
+        ...creativeData,
+      }
+    );
+    return response.data.data;
+  }
 }
 
 export const kwaiAPI = new KwaiAPI();
