@@ -12,6 +12,7 @@ import {
   BarChart3,
   Settings,
   FolderOpen,
+  LayoutGrid,
 } from "lucide-react";
 
 const menuItems = [
@@ -19,6 +20,11 @@ const menuItems = [
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Ads Manager",
+    href: "/dashboard/ads-manager",
+    icon: LayoutGrid,
   },
   {
     title: "Campanhas",

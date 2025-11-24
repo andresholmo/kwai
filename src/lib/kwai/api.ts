@@ -459,6 +459,80 @@ class KwaiAPI {
     );
     return response.data.data;
   }
+
+  /**
+   * Atualizar campanha
+   */
+  async updateCampaign(
+    accountId: number,
+    campaignId: number,
+    updates: {
+      campaignName?: string;
+      campaignBudgetType?: number;
+      campaignBudget?: number;
+      openStatus?: number;
+    }
+  ) {
+    const response = await this.client.post(
+      "/rest/n/mapi/campaign/dspCampaignUpdatePerformance",
+      {
+        accountId,
+        campaignId,
+        adCategory: 1,
+        ...updates,
+      }
+    );
+    return response.data.data;
+  }
+
+  /**
+   * Atualizar Ad Set
+   */
+  async updateAdSet(
+    accountId: number,
+    unitId: number,
+    updates: {
+      unitName?: string;
+      bid?: number;
+      dayBudget?: number;
+      websiteUrl?: string;
+      openStatus?: number;
+    }
+  ) {
+    const response = await this.client.post(
+      "/rest/n/mapi/unit/dspUnitUpdatePerformance",
+      {
+        accountId,
+        unitId,
+        adCategory: 1,
+        ...updates,
+      }
+    );
+    return response.data.data;
+  }
+
+  /**
+   * Buscar relatório de métricas
+   */
+  async getReport(
+    accountId: number,
+    params: {
+      startDate: string;
+      endDate: string;
+      reportLevel: number; // 1=campaign, 2=adset, 3=ad
+      metrics: string[];
+    }
+  ) {
+    const response = await this.client.post(
+      "/rest/n/mapi/report/dspReportQuery",
+      {
+        accountId,
+        adCategory: 1,
+        ...params,
+      }
+    );
+    return response.data.data;
+  }
 }
 
 export const kwaiAPI = new KwaiAPI();
