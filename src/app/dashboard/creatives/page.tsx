@@ -22,6 +22,7 @@ import {
 import { Plus, RefreshCw, ExternalLink, Play, Image } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { CreativeDetailsModal } from "@/components/dashboard/creative-details-modal";
 
 export default function CreativesPage() {
   const router = useRouter();
@@ -34,6 +35,8 @@ export default function CreativesPage() {
   const [selectedAdSet, setSelectedAdSet] = useState<string>("");
   const [creatives, setCreatives] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedCreative, setSelectedCreative] = useState<any>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   useEffect(() => {
     fetchAccounts();
@@ -310,6 +313,15 @@ export default function CreativesPage() {
           )}
         </CardContent>
       </Card>
+
+      <CreativeDetailsModal
+        creative={selectedCreative}
+        open={detailsOpen}
+        onClose={() => {
+          setDetailsOpen(false);
+          setSelectedCreative(null);
+        }}
+      />
     </div>
   );
 }

@@ -16,6 +16,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { accountId, campaignId, openStatus } = body;
 
+    console.log("Updating campaign status:", { accountId, campaignId, openStatus });
+
+    if (!accountId || !campaignId) {
+      return NextResponse.json(
+        { error: "accountId and campaignId required" },
+        { status: 400 }
+      );
+    }
+
     const { data: tokenData } = await (supabase.from("kwai_tokens") as any)
       .select("access_token")
       .eq("user_id", user.id)
@@ -30,6 +39,12 @@ export async function POST(request: NextRequest) {
 
     kwaiAPI.setAccessToken(tokenData.access_token);
     const result = await kwaiAPI.updateCampaignStatus(accountId, campaignId, openStatus);
+
+    console.log("Campaign status update result:", result);
+
+    if (result.status !== 200) {
+      throw new Error(result.message || "Erro ao atualizar status");
+    }
 
     return NextResponse.json({
       success: true,

@@ -223,19 +223,22 @@ class KwaiAPI {
   }
 
   /**
-   * Atualizar status da campanha (on/off)
+   * Atualizar status de campanha(s)
    */
   async updateCampaignStatus(
     accountId: number,
-    campaignId: number,
+    campaignId: number | number[],
     openStatus: number
   ) {
+    const campaignIdList = Array.isArray(campaignId) ? campaignId : [campaignId];
+
     const response = await this.client.post(
       "/rest/n/mapi/campaign/dspCampaignUpdateOpenStatusPerformance",
       {
         accountId,
-        campaignId,
+        campaignIdList,
         openStatus, // 0=Off, 1=On
+        adCategory: 1,
       }
     );
     return response.data;
@@ -314,19 +317,22 @@ class KwaiAPI {
   }
 
   /**
-   * Atualizar status do Ad Set
+   * Atualizar status de Ad Set(s)
    */
   async updateAdSetStatus(
     accountId: number,
-    unitId: number,
+    unitId: number | number[],
     openStatus: number
   ) {
+    const unitIdList = Array.isArray(unitId) ? unitId : [unitId];
+
     const response = await this.client.post(
       "/rest/n/mapi/unit/dspUnitUpdateOpenStatusPerformance",
       {
         accountId,
-        unitId,
+        unitIdList,
         openStatus, // 0=Off, 1=On
+        adCategory: 1,
       }
     );
     return response.data;
