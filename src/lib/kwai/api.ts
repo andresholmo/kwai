@@ -316,9 +316,8 @@ class KwaiAPI {
       campaignObject.conversionType = 1; // Landing Page Interaction
     }
 
-    if (campaignData.budgetOptimization !== undefined) {
-      campaignObject.budgetOptimization = campaignData.budgetOptimization;
-    }
+    // IMPORTANTE: budgetOptimization SEMPRE deve ser 0 na criação!
+    campaignObject.budgetOptimization = 0;
 
     const payload = {
       accountId,
@@ -620,26 +619,47 @@ class KwaiAPI {
   /**
    * Atualizar campanha
    */
-  async updateCampaign(
-    accountId: number,
-    campaignId: number,
-    updates: {
-      campaignName?: string;
-      campaignBudgetType?: number;
-      campaignBudget?: number;
-      openStatus?: number;
-    }
-  ) {
+  async updateCampaign(accountId: number, campaignData: any) {
+    // Converter openStatus se necessário
+    const openStatus =
+      campaignData.openStatus === 0 || campaignData.openStatus === false
+        ? 2
+        : campaignData.openStatus === 1 || campaignData.openStatus === true
+          ? 1
+          : campaignData.openStatus;
+
+    // Determinar budgetType
+    const budgetType =
+      campaignData.budgetType ||
+      (campaignData.dayBudget && campaignData.dayBudget > 0 ? 2 : 1);
+
+    const payload = {
+      accountId,
+      campaignUpdateModelList: [
+        {
+          campaignId: campaignData.campaignId,
+          ...(campaignData.campaignName && {
+            campaignName: campaignData.campaignName,
+          }),
+          ...(openStatus !== undefined && { openStatus: openStatus }),
+          budgetType: budgetType,
+          ...(campaignData.dayBudget !== undefined && {
+            dayBudget: campaignData.dayBudget || 0,
+          }),
+        },
+      ],
+      adCategory: 1,
+    };
+
+    console.log("=== UPDATE CAMPAIGN ===");
+    console.log(JSON.stringify(payload, null, 2));
+    console.log("======================");
+
     const response = await this.client.post(
       "/rest/n/mapi/campaign/dspCampaignUpdatePerformance",
-      {
-        accountId,
-        campaignId,
-        adCategory: 1,
-        ...updates,
-      }
+      payload
     );
-    return response.data.data;
+    return response.data;
   }
 
   /**
@@ -654,15 +674,21 @@ class KwaiAPI {
           ? 1
           : adSetData.openStatus;
 
-    const updatePayload = {
+    // IMPORTANTE: budgetType é obrigatório!
+    const budgetType =
+      adSetData.budgetType ||
+      (adSetData.dayBudget && adSetData.dayBudget > 0 ? 2 : 1);
+
+    const payload = {
       accountId,
       unitUpdateModelList: [
         {
           unitId: adSetData.unitId,
-          unitName: adSetData.unitName,
-          openStatus: openStatus,
+          ...(adSetData.unitName && { unitName: adSetData.unitName }),
+          ...(openStatus !== undefined && { openStatus: openStatus }),
+          budgetType: budgetType,
           ...(adSetData.dayBudget !== undefined && {
-            dayBudget: adSetData.dayBudget,
+            dayBudget: adSetData.dayBudget || 0,
           }),
           ...(adSetData.bid !== undefined && { bid: adSetData.bid }),
           ...(adSetData.websiteUrl !== undefined && {
@@ -674,12 +700,12 @@ class KwaiAPI {
     };
 
     console.log("=== UPDATE AD SET ===");
-    console.log(JSON.stringify(updatePayload, null, 2));
+    console.log(JSON.stringify(payload, null, 2));
     console.log("====================");
 
     const response = await this.client.post(
       "/rest/n/mapi/unit/dspUnitUpdatePerformance",
-      updatePayload
+      payload
     );
     return response.data;
   }

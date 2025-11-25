@@ -38,7 +38,10 @@ export async function POST(request: NextRequest) {
     kwaiAPI.setAccessToken(tokenData.access_token);
 
     // Atualizar campanha
-    const result = await kwaiAPI.updateCampaign(accountId, campaignId, updates);
+    const result = await kwaiAPI.updateCampaign(accountId, {
+      campaignId,
+      ...updates,
+    });
 
     return NextResponse.json({
       success: true,
