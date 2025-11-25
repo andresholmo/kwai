@@ -359,6 +359,29 @@ export default function DashboardPage() {
           </Card>
         </div>
       )}
+
+      {/* Criar Anúncio Completo */}
+      {isConnected && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="text-blue-900">🚀 Criar Anúncio Completo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-blue-800 mb-4">
+              Siga o fluxo completo para criar sua campanha
+            </p>
+            <Button
+              onClick={() => router.push("/dashboard/campaigns/new")}
+              className="w-full bg-blue-600 hover:bg-blue-700"
+            >
+              1. Criar Campanha →
+            </Button>
+            <p className="text-xs text-blue-600 mt-2">
+              Após criar a campanha, você será guiado para criar o conjunto e os criativos
+            </p>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

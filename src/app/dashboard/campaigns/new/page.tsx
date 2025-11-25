@@ -91,11 +91,22 @@ export default function NewCampaignPage() {
       const data = await res.json();
 
       if (data.success) {
+        // Pegar ID da campanha criada
+        const campaignId = data.campaign?.campaignId || data.campaign?.[0]?.campaignId;
+
         toast({
-          title: "Campanha criada!",
-          description: "Sua campanha foi criada com sucesso.",
+          title: "✅ Campanha criada!",
+          description: "Agora vamos criar o conjunto de anúncios.",
         });
-        router.push("/dashboard/campaigns");
+
+        // Redirecionar para criar Ad Set com campanha pré-selecionada
+        if (campaignId) {
+          router.push(
+            `/dashboard/ad-sets/new?accountId=${formData.accountId}&campaignId=${campaignId}&campaignName=${encodeURIComponent(formData.campaignName)}`
+          );
+        } else {
+          router.push("/dashboard/campaigns");
+        }
       } else {
         throw new Error(data.error || "Erro ao criar campanha");
       }

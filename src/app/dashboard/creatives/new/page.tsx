@@ -27,16 +27,32 @@ export default function NewCreativePage() {
   const [adSets, setAdSets] = useState<any[]>([]);
   const [materials, setMaterials] = useState<any[]>([]);
 
+  // Pegar parâmetros da URL
+  const preAccountId = searchParams.get("accountId");
+  const preUnitId = searchParams.get("unitId");
+  const preUnitName = searchParams.get("unitName");
+
   const [formData, setFormData] = useState({
-    accountId: searchParams.get("accountId") || "",
+    accountId: preAccountId || "",
     campaignId: "",
-    unitId: searchParams.get("unitId") || "",
+    unitId: preUnitId || "",
     creativeName: "",
     description: "",
     actionUrl: "",
     actionType: "1", // 1=Learn More, 2=Download, 3=Shop Now, etc
     materialId: "",
   });
+
+  // Mostrar mensagem se veio de criação de Ad Set
+  useEffect(() => {
+    if (preUnitName) {
+      toast({
+        title: "📢 Próximo passo",
+        description: `Adicione os criativos para "${preUnitName}"`,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preUnitName]);
 
   useEffect(() => {
     fetchAccounts();
@@ -191,7 +207,12 @@ export default function NewCreativePage() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold">Novo Criativo</h1>
-          <p className="text-gray-500">Crie um novo anúncio criativo</p>
+          {preUnitName && (
+            <p className="text-sm text-gray-500 mt-1">
+              Para o conjunto: <span className="font-semibold">{preUnitName}</span>
+            </p>
+          )}
+          {!preUnitName && <p className="text-gray-500">Crie um novo anúncio criativo</p>}
         </div>
       </div>
 
@@ -210,6 +231,7 @@ export default function NewCreativePage() {
                   onValueChange={(value) =>
                     setFormData({ ...formData, accountId: value, campaignId: "", unitId: "" })
                   }
+                  disabled={!!preAccountId}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a conta" />
@@ -257,7 +279,7 @@ export default function NewCreativePage() {
                 <Select
                   value={formData.unitId}
                   onValueChange={(value) => setFormData({ ...formData, unitId: value })}
-                  disabled={!formData.campaignId}
+                  disabled={!!preUnitId || !formData.campaignId}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o ad set" />
@@ -270,6 +292,9 @@ export default function NewCreativePage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {preUnitName && (
+                  <p className="text-xs text-blue-600">✓ Conjunto pré-selecionado</p>
+                )}
               </div>
             </CardContent>
           </Card>

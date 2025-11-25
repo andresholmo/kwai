@@ -25,9 +25,14 @@ export default function NewAdSetPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [campaigns, setCampaigns] = useState<any[]>([]);
 
+  // Pegar parâmetros da URL
+  const preAccountId = searchParams.get("accountId");
+  const preCampaignId = searchParams.get("campaignId");
+  const preCampaignName = searchParams.get("campaignName");
+
   const [formData, setFormData] = useState({
-    accountId: searchParams.get("accountId") || "",
-    campaignId: searchParams.get("campaignId") || "",
+    accountId: preAccountId || "",
+    campaignId: preCampaignId || "",
     unitName: "",
     websiteUrl: "",
     optimizeTarget: "3", // 1=Click, 2=Impression, 3=Conversion
@@ -39,6 +44,17 @@ export default function NewAdSetPage() {
     // Targeting
     gender: "3", // 1=Male, 2=Female, 3=All
   });
+
+  // Mostrar mensagem se veio de criação de campanha
+  useEffect(() => {
+    if (preCampaignName) {
+      toast({
+        title: "📢 Próximo passo",
+        description: `Configure o conjunto de anúncios para "${preCampaignName}"`,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preCampaignName]);
 
   useEffect(() => {
     fetchAccounts();
@@ -159,11 +175,21 @@ export default function NewAdSetPage() {
       const data = await res.json();
 
       if (data.success) {
+        const unitId = data.adSet?.unitId || data.adSet?.[0]?.unitId;
+
         toast({
-          title: "Ad Set criado!",
-          description: "Seu grupo de anúncios foi criado com sucesso.",
+          title: "✅ Conjunto criado!",
+          description: "Agora vamos adicionar os criativos (anúncios).",
         });
-        router.push("/dashboard/ad-sets");
+
+        // Redirecionar para criar Criativo
+        if (unitId) {
+          router.push(
+            `/dashboard/creatives/new?accountId=${formData.accountId}&unitId=${unitId}&unitName=${encodeURIComponent(formData.unitName)}`
+          );
+        } else {
+          router.push("/dashboard/ad-sets");
+        }
       } else {
         throw new Error(data.error || "Erro ao criar Ad Set");
       }
@@ -189,7 +215,12 @@ export default function NewAdSetPage() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold">Novo Ad Set</h1>
-          <p className="text-gray-500">Crie um novo grupo de anúncios</p>
+          {preCampaignName && (
+            <p className="text-sm text-gray-500 mt-1">
+              Para a campanha: <span className="font-semibold">{preCampaignName}</span>
+            </p>
+          )}
+          {!preCampaignName && <p className="text-gray-500">Crie um novo grupo de anúncios</p>}
         </div>
       </div>
 
@@ -208,6 +239,7 @@ export default function NewAdSetPage() {
                   onValueChange={(value) =>
                     setFormData({ ...formData, accountId: value, campaignId: "" })
                   }
+                  disabled={!!preAccountId}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a conta" />
@@ -232,7 +264,7 @@ export default function NewAdSetPage() {
                   onValueChange={(value) =>
                     setFormData({ ...formData, campaignId: value })
                   }
-                  disabled={!formData.accountId || campaigns.length === 0}
+                  disabled={!!preCampaignId || !formData.accountId || campaigns.length === 0}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione a campanha" />
@@ -248,6 +280,9 @@ export default function NewAdSetPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {preCampaignName && (
+                  <p className="text-xs text-blue-600">✓ Campanha pré-selecionada</p>
+                )}
               </div>
             </CardContent>
           </Card>
