@@ -51,14 +51,27 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Criar nova campanha com dados duplicados
+    // Determinar budgetType baseado no orçamento
+    // 1=sem limite, 2=orçamento diário, 3=orçamento total
+    const budgetType =
+      originalCampaign.campaignBudgetType === 1
+        ? 2 // Diário
+        : originalCampaign.campaignBudgetType === 2
+          ? 1 // Sem limite (vitalício)
+          : originalCampaign.campaignBudget && originalCampaign.campaignBudget > 0
+            ? 2 // Se tem orçamento, usar diário
+            : 1; // Sem orçamento = sem limite
+
     const newCampaignData = {
       campaignName: `${originalCampaign.campaignName} (Cópia)`,
       marketingGoal: originalCampaign.marketingGoal,
       objective: originalCampaign.objective,
-      adCategory: originalCampaign.adCategory || 1,
       campaignBudgetType: originalCampaign.campaignBudgetType,
       campaignBudget: originalCampaign.campaignBudget,
+      budgetType: budgetType, // Campo obrigatório
     };
+
+    console.log("Duplicating campaign with budgetType:", budgetType);
 
     const result = await kwaiAPI.createCampaign(accountId, newCampaignData);
 

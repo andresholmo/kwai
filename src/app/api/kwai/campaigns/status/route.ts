@@ -16,7 +16,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { accountId, campaignId, openStatus } = body;
 
-    console.log("Updating campaign status:", { accountId, campaignId, openStatus });
+    // Converter openStatus para valores válidos (1 ou 2)
+    // API Kwai aceita apenas: 1=ativo, 2=pausado (NÃO aceita 0)
+    const validOpenStatus = openStatus === 1 || openStatus === true ? 1 : 2;
+
+    console.log("Updating campaign status:", {
+      accountId,
+      campaignId,
+      original: openStatus,
+      valid: validOpenStatus,
+    });
 
     if (!accountId || !campaignId) {
       return NextResponse.json(
@@ -38,7 +47,11 @@ export async function POST(request: NextRequest) {
     }
 
     kwaiAPI.setAccessToken(tokenData.access_token);
-    const result = await kwaiAPI.updateCampaignStatus(accountId, campaignId, openStatus);
+    const result = await kwaiAPI.updateCampaignStatus(
+      accountId,
+      campaignId,
+      validOpenStatus
+    );
 
     console.log("Campaign status update result:", result);
 

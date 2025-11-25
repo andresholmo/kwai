@@ -279,6 +279,7 @@ class KwaiAPI {
       objective: number; // 1=App, 2=Website
       campaignBudgetType?: number; // 1=Daily, 2=Lifetime
       campaignBudget?: number; // em micro-reais
+      budgetType?: number; // 1=sem limite, 2=diário, 3=total
     }
   ) {
     const campaignObject: any = {
@@ -296,9 +297,19 @@ class KwaiAPI {
       campaignObject.marketingType = 1; // 1=Website Conversions
     }
 
-    // Orçamento
-    if (campaignData.campaignBudgetType) {
-      campaignObject.budgetType = campaignData.campaignBudgetType;
+    // Orçamento - budgetType é obrigatório
+    // 1=sem limite, 2=orçamento diário, 3=orçamento total
+    if (campaignData.budgetType) {
+      campaignObject.budgetType = campaignData.budgetType;
+    } else if (campaignData.campaignBudgetType) {
+      // Mapear campaignBudgetType para budgetType
+      // campaignBudgetType: 1=Diário, 2=Vitalício
+      // budgetType: 1=sem limite, 2=diário, 3=total
+      campaignObject.budgetType =
+        campaignData.campaignBudgetType === 1 ? 2 : 1; // Diário=2, Vitalício=1
+    } else {
+      // Default: sem limite
+      campaignObject.budgetType = 1;
     }
 
     if (campaignData.campaignBudget) {
