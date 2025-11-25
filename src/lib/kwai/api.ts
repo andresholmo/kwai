@@ -281,28 +281,31 @@ class KwaiAPI {
       campaignBudget?: number; // em micro-reais
     }
   ) {
-    const payload = {
-      accountId,
-      campaignAddModelList: [
-        {
-          campaignName: campaignData.campaignName,
-          marketingGoal: campaignData.marketingGoal,
-          objective: campaignData.objective,
-          adCategory: 1, // Entertainment
-          campaignType: 3, // OBRIGATÓRIO!
-          ...(campaignData.campaignBudgetType && {
-            campaignBudgetType: campaignData.campaignBudgetType,
-          }),
-          ...(campaignData.campaignBudget && {
-            campaignBudget: campaignData.campaignBudget,
-          }),
-        },
-      ],
+    const campaignObject: any = {
+      campaignName: campaignData.campaignName,
+      marketingGoal: campaignData.marketingGoal,
+      objective: campaignData.objective,
+      adCategory: 1,
+      campaignType: 3,
     };
 
-    console.log("=== KWAI API CREATE CAMPAIGN (FINAL) ===");
-    console.log("Payload:", JSON.stringify(payload, null, 2));
-    console.log("========================================");
+    // Se tiver orçamento, adicionar com os nomes corretos
+    if (campaignData.campaignBudgetType) {
+      campaignObject.budgetType = campaignData.campaignBudgetType; // budgetType, não campaignBudgetType
+    }
+
+    if (campaignData.campaignBudget) {
+      campaignObject.budget = campaignData.campaignBudget; // budget, não campaignBudget
+    }
+
+    const payload = {
+      accountId,
+      campaignAddModelList: [campaignObject],
+    };
+
+    console.log("=== CREATE CAMPAIGN PAYLOAD ===");
+    console.log(JSON.stringify(payload, null, 2));
+    console.log("===============================");
 
     const response = await this.client.post(
       "/rest/n/mapi/campaign/dspCampaignAddPerformance",
@@ -310,8 +313,7 @@ class KwaiAPI {
     );
 
     console.log("=== SUCCESS ===");
-    console.log("Response:", JSON.stringify(response.data, null, 2));
-    console.log("===============");
+    console.log(JSON.stringify(response.data, null, 2));
 
     return response.data.data;
   }
