@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 
 // Importar steps
 import { CampaignStep } from "@/components/wizard/campaign-step";
@@ -303,6 +304,17 @@ export default function CreateWizardPage() {
         <h1 className="text-2xl font-bold">Criar Campanha Completa</h1>
         <p className="text-gray-500">Configure tudo antes de salvar</p>
       </div>
+
+      {/* Alert sobre funcionalidades limitadas */}
+      <Alert className="mb-6">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Funcionalidades Limitadas</AlertTitle>
+        <AlertDescription>
+          Algumas funcionalidades como upload de materiais e configuração de pixels
+          não estão disponíveis via API. Após criar a campanha, finalize a configuração
+          diretamente no Kwai Ads Manager.
+        </AlertDescription>
+      </Alert>
 
       {/* Progress */}
       <Card>

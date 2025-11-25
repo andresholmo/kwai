@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +16,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Trash2, Upload } from "lucide-react";
 
 export function CreativesStep({ data, onUpdate }: any) {
-  const [materials, setMaterials] = useState<any[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     adSetIndex: 0,
@@ -24,27 +23,7 @@ export function CreativesStep({ data, onUpdate }: any) {
     description: "",
     actionUrl: "",
     actionType: 1,
-    materialId: "",
   });
-
-  useEffect(() => {
-    if (data.campaign?.accountId) {
-      fetchMaterials();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.campaign?.accountId]);
-
-  const fetchMaterials = async () => {
-    try {
-      const res = await fetch(`/api/kwai/materials?accountId=${data.campaign.accountId}`);
-      const dataRes = await res.json();
-      if (dataRes.success) {
-        setMaterials(dataRes.materials || []);
-      }
-    } catch (error) {
-      console.error("Erro ao buscar materiais:", error);
-    }
-  };
 
   const handleAdd = () => {
     if (!formData.creativeName || !formData.actionUrl) {
@@ -54,7 +33,6 @@ export function CreativesStep({ data, onUpdate }: any) {
 
     const newCreative = {
       ...formData,
-      materialId: formData.materialId ? parseInt(formData.materialId) : undefined,
     };
 
     if (editingIndex !== null) {
@@ -73,7 +51,6 @@ export function CreativesStep({ data, onUpdate }: any) {
       description: "",
       actionUrl: "",
       actionType: 1,
-      materialId: "",
     });
   };
 
@@ -81,7 +58,6 @@ export function CreativesStep({ data, onUpdate }: any) {
     const creative = data.creatives[index];
     setFormData({
       ...creative,
-      materialId: creative.materialId?.toString() || "",
     });
     setEditingIndex(index);
   };
@@ -165,16 +141,16 @@ export function CreativesStep({ data, onUpdate }: any) {
               </Select>
             </div>
 
-            {/* Material - Seção simplificada */}
+            {/* Material - Não disponível via API */}
             <div className="space-y-2">
-              <Label>Material (Opcional)</Label>
+              <Label>Material (Vídeo/Imagem)</Label>
               <div className="p-4 border rounded-lg bg-muted/50 text-center">
                 <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">
-                  Nenhum material encontrado na biblioteca
+                  Upload de materiais não disponível via API
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Faça upload de materiais na página de Materiais primeiro
+                  Adicione o vídeo/imagem diretamente no Kwai Ads Manager após criar o anúncio.
                 </p>
               </div>
             </div>
