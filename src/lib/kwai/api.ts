@@ -289,13 +289,20 @@ class KwaiAPI {
       campaignType: 3,
     };
 
-    // Se tiver orçamento, adicionar com os nomes corretos
+    // Para campanhas de Conversão (marketingGoal: 3) + Website (objective: 2)
+    // Precisamos definir a estratégia de entrega
+    if (campaignData.marketingGoal === 3 && campaignData.objective === 2) {
+      campaignObject.conversionType = 1; // 1=Landing Page Interaction, 2=Form, 3=Button Click
+      campaignObject.deliveryStrategy = 1; // 1=Standard Delivery
+    }
+
+    // Orçamento
     if (campaignData.campaignBudgetType) {
-      campaignObject.budgetType = campaignData.campaignBudgetType; // budgetType, não campaignBudgetType
+      campaignObject.budgetType = campaignData.campaignBudgetType;
     }
 
     if (campaignData.campaignBudget) {
-      campaignObject.budget = campaignData.campaignBudget; // budget, não campaignBudget
+      campaignObject.budget = campaignData.campaignBudget;
     }
 
     const payload = {
@@ -314,6 +321,51 @@ class KwaiAPI {
 
     console.log("=== SUCCESS ===");
     console.log(JSON.stringify(response.data, null, 2));
+    console.log("===============");
+
+    return response.data.data;
+  }
+
+  /**
+   * Criar campanha - versão simplificada para teste
+   */
+  async createCampaignSimple(
+    accountId: number,
+    campaignData: {
+      campaignName: string;
+      campaignBudgetType?: number;
+      campaignBudget?: number;
+    }
+  ) {
+    const campaignObject: any = {
+      campaignName: campaignData.campaignName,
+      marketingGoal: 2, // Consideration (mais simples)
+      objective: 2, // Website
+      adCategory: 1,
+      campaignType: 3,
+    };
+
+    if (campaignData.campaignBudgetType) {
+      campaignObject.budgetType = campaignData.campaignBudgetType;
+    }
+
+    if (campaignData.campaignBudget) {
+      campaignObject.budget = campaignData.campaignBudget;
+    }
+
+    const payload = {
+      accountId,
+      campaignAddModelList: [campaignObject],
+    };
+
+    console.log("=== SIMPLE CAMPAIGN PAYLOAD ===");
+    console.log(JSON.stringify(payload, null, 2));
+    console.log("================================");
+
+    const response = await this.client.post(
+      "/rest/n/mapi/campaign/dspCampaignAddPerformance",
+      payload
+    );
 
     return response.data.data;
   }
