@@ -211,16 +211,18 @@ export function AdSetsStep({ data, onUpdate }: any) {
             <div className="space-y-2">
               <Label>Pixel de Conversão *</Label>
               <Select
-                value={formData.pixelId}
-                onValueChange={(v) => setFormData({ ...formData, pixelId: v })}
+                value={formData.pixelId || "none"}
+                onValueChange={(v) =>
+                  setFormData({ ...formData, pixelId: v === "none" ? "" : v })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um pixel" />
                 </SelectTrigger>
                 <SelectContent>
                   {pixels.length === 0 ? (
-                    <SelectItem value="" disabled>
-                      Nenhum pixel encontrado
+                    <SelectItem value="loading" disabled>
+                      Carregando pixels...
                     </SelectItem>
                   ) : (
                     pixels.map((pixel) => (

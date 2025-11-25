@@ -36,26 +36,21 @@ export async function GET(request: NextRequest) {
 
     kwaiAPI.setAccessToken(tokenData.access_token);
 
-    // Buscar pixels via API do Kwai
-    // Nota: Endpoint pode variar, retornando array vazio se não disponível
-    let pixels: any[] = [];
-
     try {
-      // Tentar buscar pixels (endpoint pode não estar disponível)
-      const response = await kwaiAPI.post("/rest/n/mapi/pixel/query", {
-        accountId: parseInt(accountId),
+      const pixels = await kwaiAPI.getPixels(parseInt(accountId));
+      return NextResponse.json({
+        success: true,
+        pixels: pixels?.data || [],
       });
-      pixels = response.data?.data || [];
     } catch (error: any) {
-      console.log("API de pixels não disponível ou endpoint diferente:", error.message);
-      // Retornar array vazio se API não estiver disponível
-      pixels = [];
+      // Se não conseguir buscar pixels, retornar lista vazia
+      // Não quebrar a aplicação
+      console.log("Pixels endpoint não disponível, retornando lista vazia");
+      return NextResponse.json({
+        success: true,
+        pixels: [],
+      });
     }
-
-    return NextResponse.json({
-      success: true,
-      pixels: pixels,
-    });
   } catch (error: any) {
     console.error("Erro ao buscar pixels:", error);
     return NextResponse.json({

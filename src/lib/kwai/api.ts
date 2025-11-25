@@ -734,6 +734,37 @@ class KwaiAPI {
   }
 
   /**
+   * Buscar pixels de conversão
+   */
+  async getPixels(accountId: number) {
+    try {
+      // Tentar endpoint padrão do Kwai Ads
+      const payload = {
+        accountId,
+        pageNo: 1,
+        pageSize: 100,
+      };
+
+      console.log("=== GET PIXELS ===");
+      console.log("Trying endpoint: /rest/n/mapi/pixel/dspPixelPageQueryPerformance");
+
+      const response = await this.client.post(
+        "/rest/n/mapi/pixel/dspPixelPageQueryPerformance",
+        payload
+      );
+
+      console.log("Pixels response:", response.data);
+      return response.data.data;
+    } catch (error: any) {
+      console.error("Erro ao buscar pixels:", error.message);
+
+      // Se falhar, retornar array vazio ao invés de erro
+      // O usuário pode não ter pixels configurados
+      return { data: [], total: 0 };
+    }
+  }
+
+  /**
    * Método auxiliar para fazer chamadas diretas (para testes)
    */
   async post(endpoint: string, data: any) {
