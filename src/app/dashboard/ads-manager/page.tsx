@@ -45,17 +45,12 @@ export default function AdsManagerPage() {
   const router = useRouter();
   const { toast } = useToast();
 
-  // Nível de visualização atual
   const [viewLevel, setViewLevel] = useState<ViewLevel>("campaigns");
-
-  // Contas
   const [accounts, setAccounts] = useState<any[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<string>("");
-
-  // Loading
   const [loading, setLoading] = useState(false);
 
-  // Dados SEPARADOS para cada nível
+  // Dados separados
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [adSets, setAdSets] = useState<any[]>([]);
   const [ads, setAds] = useState<any[]>([]);
@@ -64,34 +59,23 @@ export default function AdsManagerPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
   const [selectedAdSet, setSelectedAdSet] = useState<any>(null);
 
-  // Seleção para ações em massa
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-
-  // Filtros
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "all" | "active" | "paused"
-  >("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "paused">("all");
 
-  // Edição
   const [editOpen, setEditOpen] = useState(false);
-  const [editType, setEditType] = useState<"campaign" | "adset" | "ad">(
-    "campaign"
-  );
+  const [editType, setEditType] = useState<"campaign" | "adset" | "ad">("campaign");
   const [editData, setEditData] = useState<any>(null);
 
-  // Buscar contas ao iniciar
   useEffect(() => {
     fetchAccounts();
   }, []);
 
-  // Buscar campanhas quando conta mudar
   useEffect(() => {
     if (selectedAccount) {
       resetToRootLevel();
       fetchCampaigns();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAccount]);
 
   const resetToRootLevel = () => {
@@ -119,10 +103,14 @@ export default function AdsManagerPage() {
   const fetchCampaigns = async () => {
     setLoading(true);
     try {
-      const res = await fetch(
-        `/api/kwai/campaigns?accountId=${selectedAccount}`
-      );
+      console.log("=== FETCHING CAMPAIGNS ===");
+      console.log("Account:", selectedAccount);
+
+      const res = await fetch(`/api/kwai/campaigns?accountId=${selectedAccount}`);
       const data = await res.json();
+
+      console.log("Campaigns response:", data);
+
       if (data.success) {
         setCampaigns(removeDuplicates(data.campaigns || [], "campaignId"));
       }
@@ -137,12 +125,23 @@ export default function AdsManagerPage() {
   const fetchAdSets = async (campaignId: number) => {
     setLoading(true);
     try {
+      console.log("=== FETCHING AD SETS ===");
+      console.log("Account:", selectedAccount);
+      console.log("Campaign:", campaignId);
+
+      // IMPORTANTE: Passar campaignId para filtrar
       const res = await fetch(
         `/api/kwai/ad-sets?accountId=${selectedAccount}&campaignId=${campaignId}`
       );
       const data = await res.json();
+
+      console.log("Ad Sets response:", data);
+      console.log("Ad Sets count:", data.adSets?.length || 0);
+
       if (data.success) {
-        setAdSets(removeDuplicates(data.adSets || [], "unitId"));
+        const filtered = removeDuplicates(data.adSets || [], "unitId");
+        console.log("Filtered ad sets:", filtered.length);
+        setAdSets(filtered);
       }
     } catch (error) {
       console.error("Erro ao buscar ad sets:", error);
@@ -155,12 +154,23 @@ export default function AdsManagerPage() {
   const fetchAds = async (unitId: number) => {
     setLoading(true);
     try {
+      console.log("=== FETCHING ADS ===");
+      console.log("Account:", selectedAccount);
+      console.log("Unit:", unitId);
+
+      // IMPORTANTE: Passar unitId para filtrar
       const res = await fetch(
         `/api/kwai/creatives?accountId=${selectedAccount}&unitId=${unitId}`
       );
       const data = await res.json();
+
+      console.log("Ads response:", data);
+      console.log("Ads count:", data.creatives?.length || 0);
+
       if (data.success) {
-        setAds(removeDuplicates(data.creatives || [], "creativeId"));
+        const filtered = removeDuplicates(data.creatives || [], "creativeId");
+        console.log("Filtered ads:", filtered.length);
+        setAds(filtered);
       }
     } catch (error) {
       console.error("Erro ao buscar anúncios:", error);
@@ -180,22 +190,33 @@ export default function AdsManagerPage() {
     });
   };
 
-  // Navegação hierárquica
   const navigateToCampaign = (campaign: any) => {
+    console.log("=== NAVIGATE TO CAMPAIGN ===");
+    console.log("Campaign ID:", campaign.campaignId);
+    console.log("Campaign Name:", campaign.campaignName);
+
     setSelectedCampaign(campaign);
     setSelectedAdSet(null);
     setAds([]);
     setViewLevel("adsets");
     setSelectedIds(new Set());
     setSearchQuery("");
+
+    // Buscar ad sets DESTA campanha
     fetchAdSets(campaign.campaignId);
   };
 
   const navigateToAdSet = (adSet: any) => {
+    console.log("=== NAVIGATE TO AD SET ===");
+    console.log("Ad Set ID:", adSet.unitId);
+    console.log("Ad Set Name:", adSet.unitName);
+
     setSelectedAdSet(adSet);
     setViewLevel("ads");
     setSelectedIds(new Set());
     setSearchQuery("");
+
+    // Buscar anúncios DESTE ad set
     fetchAds(adSet.unitId);
   };
 
@@ -204,6 +225,10 @@ export default function AdsManagerPage() {
       setViewLevel("adsets");
       setSelectedAdSet(null);
       setAds([]);
+      // Recarregar ad sets da campanha
+      if (selectedCampaign) {
+        fetchAdSets(selectedCampaign.campaignId);
+      }
     } else if (viewLevel === "adsets") {
       setViewLevel("campaigns");
       setSelectedCampaign(null);
@@ -224,21 +249,20 @@ export default function AdsManagerPage() {
     toast({ title: "Atualizado!" });
   };
 
-  // Toggle de status
   const handleStatusToggle = async (id: number, newStatus: boolean) => {
     const endpoint =
       viewLevel === "campaigns"
         ? "/api/kwai/campaigns/status"
         : viewLevel === "adsets"
-        ? "/api/kwai/ad-sets/status"
-        : "/api/kwai/creatives/status";
+          ? "/api/kwai/ad-sets/status"
+          : "/api/kwai/creatives/status";
 
     const idKey =
       viewLevel === "campaigns"
         ? "campaignId"
         : viewLevel === "adsets"
-        ? "unitId"
-        : "creativeId";
+          ? "unitId"
+          : "creativeId";
 
     try {
       const res = await fetch(endpoint, {
@@ -247,7 +271,7 @@ export default function AdsManagerPage() {
         body: JSON.stringify({
           accountId: parseInt(selectedAccount),
           [idKey]: id,
-          openStatus: newStatus ? 1 : 2,
+          openStatus: newStatus ? 1 : 0,
         }),
       });
 
@@ -256,12 +280,9 @@ export default function AdsManagerPage() {
 
       toast({ title: newStatus ? "Ativado!" : "Pausado!" });
 
-      // Atualizar lista local
       const updateList = (list: any[], idField: string) =>
         list.map((item) =>
-          item[idField] === id
-            ? { ...item, openStatus: newStatus ? 1 : 2 }
-            : item
+          item[idField] === id ? { ...item, openStatus: newStatus ? 1 : 0 } : item
         );
 
       if (viewLevel === "campaigns") {
@@ -272,15 +293,10 @@ export default function AdsManagerPage() {
         setAds((prev) => updateList(prev, "creativeId"));
       }
     } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     }
   };
 
-  // Seleção
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedIds(new Set(filteredItems.map((item) => getItemId(item))));
@@ -296,7 +312,6 @@ export default function AdsManagerPage() {
     setSelectedIds(newSelected);
   };
 
-  // Ações em massa
   const handleBulkActivate = async () => {
     for (const id of selectedIds) {
       await handleStatusToggle(id, true);
@@ -326,15 +341,10 @@ export default function AdsManagerPage() {
         const res = await fetch("/api/kwai/campaigns/duplicate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            accountId: parseInt(selectedAccount),
-            campaignId: id,
-          }),
+          body: JSON.stringify({ accountId: parseInt(selectedAccount), campaignId: id }),
         });
         if ((await res.json()).success) count++;
-      } catch {
-        // Ignorar erros individuais
-      }
+      } catch {}
     }
     toast({ title: `${count} campanha(s) duplicada(s)!` });
     setSelectedIds(new Set());
@@ -345,16 +355,9 @@ export default function AdsManagerPage() {
     toast({ title: "Exclusão não disponível", variant: "destructive" });
   };
 
-  // Edição
   const handleEdit = (item: any, e: React.MouseEvent) => {
     e.stopPropagation();
-    setEditType(
-      viewLevel === "campaigns"
-        ? "campaign"
-        : viewLevel === "adsets"
-        ? "adset"
-        : "ad"
-    );
+    setEditType(viewLevel === "campaigns" ? "campaign" : viewLevel === "adsets" ? "adset" : "ad");
     setEditData(item);
     setEditOpen(true);
   };
@@ -365,15 +368,11 @@ export default function AdsManagerPage() {
         editType === "campaign"
           ? "/api/kwai/campaigns/edit"
           : editType === "adset"
-          ? "/api/kwai/ad-sets/edit"
-          : "/api/kwai/creatives/edit";
+            ? "/api/kwai/ad-sets/edit"
+            : "/api/kwai/creatives/edit";
 
       const idKey =
-        editType === "campaign"
-          ? "campaignId"
-          : editType === "adset"
-          ? "unitId"
-          : "creativeId";
+        editType === "campaign" ? "campaignId" : editType === "adset" ? "unitId" : "creativeId";
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -402,10 +401,7 @@ export default function AdsManagerPage() {
       const res = await fetch("/api/kwai/campaigns/duplicate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          accountId: parseInt(selectedAccount),
-          campaignId: id,
-        }),
+        body: JSON.stringify({ accountId: parseInt(selectedAccount), campaignId: id }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error);
@@ -416,7 +412,6 @@ export default function AdsManagerPage() {
     }
   };
 
-  // Dados baseados no nível atual
   const getCurrentData = (): any[] => {
     switch (viewLevel) {
       case "campaigns":
@@ -442,7 +437,6 @@ export default function AdsManagerPage() {
     return item.creativeName || "Sem nome";
   };
 
-  // Filtrar
   const filteredItems = getCurrentData().filter((item) => {
     const name = getItemName(item).toLowerCase();
     const matchesSearch = name.includes(searchQuery.toLowerCase());
@@ -454,20 +448,16 @@ export default function AdsManagerPage() {
   });
 
   const allSelected =
-    filteredItems.length > 0 &&
-    filteredItems.every((item) => selectedIds.has(getItemId(item)));
+    filteredItems.length > 0 && filteredItems.every((item) => selectedIds.has(getItemId(item)));
 
-  // Título baseado no nível
   const getTitle = () => {
     if (viewLevel === "campaigns") return "Campanhas";
-    if (viewLevel === "adsets")
-      return `Conjuntos de "${selectedCampaign?.campaignName}"`;
+    if (viewLevel === "adsets") return `Conjuntos de "${selectedCampaign?.campaignName}"`;
     return `Anúncios de "${selectedAdSet?.unitName}"`;
   };
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           {viewLevel !== "campaigns" && (
@@ -484,35 +474,19 @@ export default function AdsManagerPage() {
             </p>
           </div>
         </div>
-        <Button
-          onClick={() =>
-            router.push(
-              `/dashboard/${
-                viewLevel === "campaigns"
-                  ? "campaigns"
-                  : viewLevel === "adsets"
-                  ? "ad-sets"
-                  : "creatives"
-              }/new`
-            )
-          }
-        >
+        <Button onClick={() => router.push(`/dashboard/campaigns/create-wizard`)}>
           <Plus className="mr-2 h-4 w-4" />
           Criar
         </Button>
       </div>
 
-      {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm">
         <button
           onClick={resetToRootLevel}
-          className={`hover:text-blue-600 ${
-            viewLevel === "campaigns" ? "font-semibold" : "text-gray-500"
-          }`}
+          className={`hover:text-blue-600 ${viewLevel === "campaigns" ? "font-semibold" : "text-gray-500"}`}
         >
           Campanhas
         </button>
-
         {selectedCampaign && (
           <>
             <ChevronRight className="h-4 w-4 text-gray-400" />
@@ -522,15 +496,12 @@ export default function AdsManagerPage() {
                 setSelectedAdSet(null);
                 setAds([]);
               }}
-              className={`hover:text-blue-600 ${
-                viewLevel === "adsets" ? "font-semibold" : "text-gray-500"
-              }`}
+              className={`hover:text-blue-600 ${viewLevel === "adsets" ? "font-semibold" : "text-gray-500"}`}
             >
               {selectedCampaign.campaignName}
             </button>
           </>
         )}
-
         {selectedAdSet && (
           <>
             <ChevronRight className="h-4 w-4 text-gray-400" />
@@ -539,23 +510,16 @@ export default function AdsManagerPage() {
         )}
       </div>
 
-      {/* Filtros */}
       <Card>
         <CardContent className="py-3">
           <div className="flex items-center gap-3">
-            <Select
-              value={selectedAccount}
-              onValueChange={setSelectedAccount}
-            >
+            <Select value={selectedAccount} onValueChange={setSelectedAccount}>
               <SelectTrigger className="w-[130px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {accounts.map((a) => (
-                  <SelectItem
-                    key={a.account_id}
-                    value={a.account_id.toString()}
-                  >
+                  <SelectItem key={a.account_id} value={a.account_id.toString()}>
                     {a.account_name}
                   </SelectItem>
                 ))}
@@ -572,10 +536,7 @@ export default function AdsManagerPage() {
               />
             </div>
 
-            <Select
-              value={statusFilter}
-              onValueChange={(v: any) => setStatusFilter(v)}
-            >
+            <Select value={statusFilter} onValueChange={(v: any) => setStatusFilter(v)}>
               <SelectTrigger className="w-[110px]">
                 <SelectValue />
               </SelectTrigger>
@@ -586,21 +547,25 @@ export default function AdsManagerPage() {
               </SelectContent>
             </Select>
 
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleRefresh}
-              disabled={loading}
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
-              />
+            <Button variant="outline" size="icon" onClick={handleRefresh}>
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Bulk Actions */}
+      {viewLevel === "adsets" && adSets.length === 0 && !loading && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800">
+          Esta campanha não possui conjuntos de anúncios.
+        </div>
+      )}
+
+      {viewLevel === "ads" && ads.length === 0 && !loading && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-yellow-800">
+          Este conjunto não possui anúncios.
+        </div>
+      )}
+
       <BulkActions
         selectedCount={selectedIds.size}
         onClearSelection={() => setSelectedIds(new Set())}
@@ -610,27 +575,19 @@ export default function AdsManagerPage() {
         onDelete={handleBulkDelete}
       />
 
-      {/* Tabela */}
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
                 <TableHead className="w-10">
-                  <Checkbox
-                    checked={allSelected}
-                    onCheckedChange={handleSelectAll}
-                  />
+                  <Checkbox checked={allSelected} onCheckedChange={handleSelectAll} />
                 </TableHead>
                 <TableHead className="w-14">On/Off</TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead className="w-24">Status</TableHead>
-                {viewLevel === "campaigns" && (
-                  <TableHead className="w-32">Orçamento</TableHead>
-                )}
-                {viewLevel === "adsets" && (
-                  <TableHead className="w-24">Bid</TableHead>
-                )}
+                {viewLevel === "campaigns" && <TableHead className="w-32">Orçamento</TableHead>}
+                {viewLevel === "adsets" && <TableHead className="w-24">Bid</TableHead>}
                 <TableHead className="w-24">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -660,10 +617,7 @@ export default function AdsManagerPage() {
                 ))
               ) : filteredItems.length === 0 ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="text-center py-10 text-gray-500"
-                  >
+                  <TableCell colSpan={6} className="text-center py-10 text-gray-500">
                     {searchQuery ? "Nenhum resultado" : "Nenhum item"}
                   </TableCell>
                 </TableRow>
@@ -675,14 +629,10 @@ export default function AdsManagerPage() {
                   return (
                     <TableRow
                       key={id}
-                      className={`${
-                        selectedIds.has(id) ? "bg-blue-50" : ""
-                      } ${isClickable ? "cursor-pointer hover:bg-gray-50" : ""}`}
+                      className={`${selectedIds.has(id) ? "bg-blue-50" : ""} ${isClickable ? "cursor-pointer hover:bg-gray-50" : ""}`}
                       onClick={() => {
-                        if (viewLevel === "campaigns")
-                          navigateToCampaign(item);
-                        else if (viewLevel === "adsets")
-                          navigateToAdSet(item);
+                        if (viewLevel === "campaigns") navigateToCampaign(item);
+                        else if (viewLevel === "adsets") navigateToAdSet(item);
                       }}
                     >
                       <TableCell onClick={(e) => e.stopPropagation()}>
@@ -700,55 +650,35 @@ export default function AdsManagerPage() {
                       <TableCell>
                         <div className="flex items-center justify-between">
                           <div>
-                            <div className="font-medium">
-                              {getItemName(item)}
-                            </div>
-                            <div className="text-xs text-gray-400">
-                              ID: {id}
-                            </div>
+                            <div className="font-medium">{getItemName(item)}</div>
+                            <div className="text-xs text-gray-400">ID: {id}</div>
                           </div>
-                          {isClickable && (
-                            <ChevronRight className="h-4 w-4 text-gray-300" />
-                          )}
+                          {isClickable && <ChevronRight className="h-4 w-4 text-gray-300" />}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <StatusBadge
-                          status={item.openStatus === 1 ? "active" : "paused"}
-                        />
+                        <StatusBadge status={item.openStatus === 1 ? "active" : "paused"} />
                       </TableCell>
                       {viewLevel === "campaigns" && (
                         <TableCell>
                           <div className="text-sm">
                             {formatCurrencyBRL(item.campaignBudget) || "-"}
                             <div className="text-xs text-gray-400">
-                              {item.campaignBudgetType === 1
-                                ? "Diário"
-                                : "Vitalício"}
+                              {item.campaignBudgetType === 1 ? "Diário" : "Vitalício"}
                             </div>
                           </div>
                         </TableCell>
                       )}
                       {viewLevel === "adsets" && (
-                        <TableCell>
-                          {formatCurrencyBRL(item.bid)}
-                        </TableCell>
+                        <TableCell>{formatCurrencyBRL(item.bid)}</TableCell>
                       )}
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => handleEdit(item, e)}
-                          >
+                          <Button variant="ghost" size="icon" onClick={(e) => handleEdit(item, e)}>
                             <Edit className="h-4 w-4" />
                           </Button>
                           {viewLevel === "campaigns" && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => handleDuplicate(id, e)}
-                            >
+                            <Button variant="ghost" size="icon" onClick={(e) => handleDuplicate(id, e)}>
                               <Copy className="h-4 w-4" />
                             </Button>
                           )}
@@ -763,7 +693,6 @@ export default function AdsManagerPage() {
         </CardContent>
       </Card>
 
-      {/* Edit Sheet */}
       <EditSheet
         open={editOpen}
         onClose={() => setEditOpen(false)}
