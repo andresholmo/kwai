@@ -281,7 +281,6 @@ class KwaiAPI {
       campaignBudget?: number; // em micro-reais
     }
   ) {
-    // Testar com adCategory DENTRO do objeto da campanha
     const payload = {
       accountId,
       campaignAddModelList: [
@@ -289,7 +288,8 @@ class KwaiAPI {
           campaignName: campaignData.campaignName,
           marketingGoal: campaignData.marketingGoal,
           objective: campaignData.objective,
-          adCategory: 1, // <<<< MOVER PARA DENTRO
+          adCategory: 1, // Entertainment
+          campaignType: 3, // OBRIGATÓRIO!
           ...(campaignData.campaignBudgetType && {
             campaignBudgetType: campaignData.campaignBudgetType,
           }),
@@ -300,70 +300,22 @@ class KwaiAPI {
       ],
     };
 
-    console.log("=== KWAI API CREATE CAMPAIGN (v2) ===");
-    console.log("Endpoint:", "/rest/n/mapi/campaign/dspCampaignAddPerformance");
+    console.log("=== KWAI API CREATE CAMPAIGN (FINAL) ===");
     console.log("Payload:", JSON.stringify(payload, null, 2));
-    console.log("=====================================");
+    console.log("========================================");
 
     const response = await this.client.post(
       "/rest/n/mapi/campaign/dspCampaignAddPerformance",
       payload
     );
 
-    console.log("=== KWAI API RESPONSE ===");
+    console.log("=== SUCCESS ===");
     console.log("Response:", JSON.stringify(response.data, null, 2));
-    console.log("=========================");
+    console.log("===============");
 
     return response.data.data;
   }
 
-  /**
-   * Criar campanha - Versão alternativa do endpoint
-   */
-  async createCampaignAlt(
-    accountId: number,
-    campaignData: {
-      campaignName: string;
-      marketingGoal: number;
-      objective: number;
-      campaignBudgetType?: number;
-      campaignBudget?: number;
-    }
-  ) {
-    // Tentar endpoint sem "Performance" no final
-    const payload = {
-      accountId,
-      adCategory: 1,
-      campaignAddModelList: [
-        {
-          campaignName: campaignData.campaignName,
-          marketingGoal: campaignData.marketingGoal,
-          objective: campaignData.objective,
-          ...(campaignData.campaignBudgetType && {
-            campaignBudgetType: campaignData.campaignBudgetType,
-          }),
-          ...(campaignData.campaignBudget && {
-            campaignBudget: campaignData.campaignBudget,
-          }),
-        },
-      ],
-    };
-
-    console.log("=== TRYING ALTERNATIVE ENDPOINT ===");
-    console.log("Endpoint:", "/rest/n/mapi/campaign/dspCampaignAdd");
-    console.log("Payload:", JSON.stringify(payload, null, 2));
-
-    const response = await this.client.post(
-      "/rest/n/mapi/campaign/dspCampaignAdd", // Sem "Performance"
-      payload
-    );
-
-    console.log("=== ALTERNATIVE ENDPOINT RESPONSE ===");
-    console.log("Response:", JSON.stringify(response.data, null, 2));
-    console.log("====================================");
-
-    return response.data.data;
-  }
 
   /**
    * Atualizar status de campanha(s)

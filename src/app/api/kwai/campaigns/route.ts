@@ -94,165 +94,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("=== CAMPAIGN CREATION REQUEST ===");
-    console.log("User ID:", user.id);
-    console.log("Account ID:", accountId);
-    console.log("Campaign Data:", JSON.stringify(campaignData, null, 2));
-
-    const { data: tokenData, error: tokenError } = await (supabase.from("kwai_tokens") as any)
-      .select("*")
+    const { data: tokenData } = await (supabase.from("kwai_tokens") as any)
+      .select("access_token")
       .eq("user_id", user.id)
       .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (tokenError || !tokenData) {
-      console.error("Token error:", tokenError);
-      return NextResponse.json(
-        { error: "Token not found or expired" },
-        { status: 401 }
-      );
-    }
-
-    console.log("Token found:");
-    console.log("- Expires at:", tokenData.expires_at);
-    console.log(
-      "- Access token (first 20):",
-      tokenData.access_token?.substring(0, 20) || "MISSING"
-    );
-    console.log("- Scope:", tokenData.scope);
-
-    // Verificar se token realmente não expirou
-    const expiresAt = new Date(tokenData.expires_at);
-    const now = new Date();
-    const minutesUntilExpiry =
-      (expiresAt.getTime() - now.getTime()) / 1000 / 60;
-
-    console.log("Token expiry check:");
-    console.log("- Now:", now.toISOString());
-    console.log("- Expires:", expiresAt.toISOString());
-    console.log("- Minutes until expiry:", minutesUntilExpiry.toFixed(2));
-
-    if (minutesUntilExpiry < 0) {
-      console.error("Token expired!");
-      return NextResponse.json(
-        { error: "Token expired, please reconnect" },
-        { status: 401 }
-      );
+    if (!tokenData) {
+      return NextResponse.json({ error: "Token expired" }, { status: 401 });
     }
 
     kwaiAPI.setAccessToken(tokenData.access_token);
-
-    let result;
-    let lastError;
-
-    // Variação 1: adCategory no root
-    try {
-      console.log("Trying: adCategory at root level...");
-      const payload1 = {
-        accountId,
-        adCategory: 1,
-        campaignAddModelList: [
-          {
-            campaignName: campaignData.campaignName,
-            marketingGoal: campaignData.marketingGoal,
-            objective: campaignData.objective,
-            ...(campaignData.campaignBudgetType && {
-              campaignBudgetType: campaignData.campaignBudgetType,
-            }),
-            ...(campaignData.campaignBudget && {
-              campaignBudget: campaignData.campaignBudget,
-            }),
-          },
-        ],
-      };
-      console.log("Payload:", JSON.stringify(payload1, null, 2));
-
-      const res1 = await kwaiAPI.post(
-        "/rest/n/mapi/campaign/dspCampaignAddPerformance",
-        payload1
-      );
-      result = res1.data.data;
-      console.log("SUCCESS with adCategory at root!");
-    } catch (error: any) {
-      console.log(
-        "FAILED with adCategory at root:",
-        error.response?.data?.message || error.message
-      );
-      lastError = error;
-
-      // Variação 2: adCategory dentro do objeto
-      try {
-        console.log("Trying: adCategory inside campaign object...");
-        const payload2 = {
-          accountId,
-          campaignAddModelList: [
-            {
-              campaignName: campaignData.campaignName,
-              marketingGoal: campaignData.marketingGoal,
-              objective: campaignData.objective,
-              adCategory: 1, // DENTRO
-              ...(campaignData.campaignBudgetType && {
-                campaignBudgetType: campaignData.campaignBudgetType,
-              }),
-              ...(campaignData.campaignBudget && {
-                campaignBudget: campaignData.campaignBudget,
-              }),
-            },
-          ],
-        };
-        console.log("Payload:", JSON.stringify(payload2, null, 2));
-
-        const res2 = await kwaiAPI.post(
-          "/rest/n/mapi/campaign/dspCampaignAddPerformance",
-          payload2
-        );
-        result = res2.data.data;
-        console.log("SUCCESS with adCategory inside!");
-      } catch (error2: any) {
-        console.log(
-          "FAILED with adCategory inside:",
-          error2.response?.data?.message || error2.message
-        );
-
-        // Variação 3: SEM adCategory
-        try {
-          console.log("Trying: WITHOUT adCategory...");
-          const payload3 = {
-            accountId,
-            campaignAddModelList: [
-              {
-                campaignName: campaignData.campaignName,
-                marketingGoal: campaignData.marketingGoal,
-                objective: campaignData.objective,
-                // SEM adCategory
-                ...(campaignData.campaignBudgetType && {
-                  campaignBudgetType: campaignData.campaignBudgetType,
-                }),
-                ...(campaignData.campaignBudget && {
-                  campaignBudget: campaignData.campaignBudget,
-                }),
-              },
-            ],
-          };
-          console.log("Payload:", JSON.stringify(payload3, null, 2));
-
-          const res3 = await kwaiAPI.post(
-            "/rest/n/mapi/campaign/dspCampaignAddPerformance",
-            payload3
-          );
-          result = res3.data.data;
-          console.log("SUCCESS without adCategory!");
-        } catch (error3: any) {
-          console.log(
-            "FAILED without adCategory:",
-            error3.response?.data?.message || error3.message
-          );
-          throw lastError; // Jogar o erro original
-        }
-      }
-    }
+    const result = await kwaiAPI.createCampaign(accountId, campaignData);
 
     return NextResponse.json({
       success: true,
@@ -260,24 +115,10 @@ export async function POST(request: NextRequest) {
       campaign: result,
     });
   } catch (error: any) {
-    console.error("=== FINAL ERROR ===");
-    console.error("Error type:", typeof error);
-    console.error("Error constructor:", error.constructor?.name);
-    console.error("Has response:", !!error.response);
-    console.error("Status:", error.response?.status);
-    console.error("Message:", error.message);
-    console.error("Response data:", error.response?.data);
-    console.error("Config URL:", error.config?.url);
-    console.error("Config data:", error.config?.data);
-    console.error("===================");
-
+    console.error("Erro ao criar campanha:", error.response?.data?.message || error.message);
     return NextResponse.json(
       {
-        error:
-          error.response?.data?.message ||
-          error.response?.data?.err_msg ||
-          error.message,
-        details: error.response?.data,
+        error: error.response?.data?.message || error.message,
       },
       { status: 500 }
     );
