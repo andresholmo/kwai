@@ -292,7 +292,8 @@ class KwaiAPI {
     // Para campanhas de Conversão (marketingGoal: 3) + Website (objective: 2)
     if (campaignData.marketingGoal === 3 && campaignData.objective === 2) {
       campaignObject.conversionType = 1; // Landing Page Interaction
-      campaignObject.deliveryStrategy = 3; // 3 ou 4 são os valores aceitos
+      campaignObject.deliveryStrategy = 3;
+      campaignObject.marketingType = 1; // 1=Website Conversions
     }
 
     // Orçamento

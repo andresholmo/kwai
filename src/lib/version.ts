@@ -1,3 +1,3 @@
 // Versão do sistema - atualizada automaticamente
-export const APP_VERSION = "1.0.34";
+export const APP_VERSION = "1.0.35";
 export const BUILD_DATE = "2025-11-25";
