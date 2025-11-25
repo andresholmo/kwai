@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +16,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { reaisToMicro } from "@/lib/utils";
 
 export function AdSetsStep({ data, onUpdate }: any) {
+  const [pixels, setPixels] = useState<any[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     unitName: "",
@@ -25,7 +26,24 @@ export function AdSetsStep({ data, onUpdate }: any) {
     bid: "",
     dayBudget: "",
     gender: 3,
+    pixelId: "",
   });
+
+  // Buscar pixels quando selecionar conta
+  useEffect(() => {
+    if (data.campaign?.accountId) {
+      fetch(`/api/kwai/pixels?accountId=${data.campaign.accountId}`)
+        .then((res) => res.json())
+        .then((dataRes) => {
+          if (dataRes.success) {
+            setPixels(dataRes.pixels || []);
+          }
+        })
+        .catch((error) => {
+          console.error("Erro ao buscar pixels:", error);
+        });
+    }
+  }, [data.campaign?.accountId]);
 
   const handleAdd = () => {
     if (!formData.unitName || !formData.websiteUrl || !formData.bid) {
@@ -33,10 +51,17 @@ export function AdSetsStep({ data, onUpdate }: any) {
       return;
     }
 
+    // Validar pixel quando otimização é conversões
+    if (formData.optimizationGoal === 3 && !formData.pixelId) {
+      alert("Pixel de Conversão é obrigatório quando a otimização é Conversões");
+      return;
+    }
+
     const newAdSet = {
       ...formData,
       bid: reaisToMicro(parseFloat(formData.bid)),
       dayBudget: formData.dayBudget ? reaisToMicro(parseFloat(formData.dayBudget)) : undefined,
+      pixelId: formData.pixelId ? parseInt(formData.pixelId) : undefined,
     };
 
     if (editingIndex !== null) {
@@ -57,6 +82,7 @@ export function AdSetsStep({ data, onUpdate }: any) {
       bid: "",
       dayBudget: "",
       gender: 3,
+      pixelId: "",
     });
   };
 
@@ -66,6 +92,7 @@ export function AdSetsStep({ data, onUpdate }: any) {
       ...adSet,
       bid: (adSet.bid / 1000000).toString(),
       dayBudget: adSet.dayBudget ? (adSet.dayBudget / 1000000).toString() : "",
+      pixelId: adSet.pixelId?.toString() || "",
     });
     setEditingIndex(index);
   };
@@ -155,7 +182,9 @@ export function AdSetsStep({ data, onUpdate }: any) {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Lance (R$) *</Label>
+              <Label>
+                {formData.optimizationGoal === 3 ? "CPA (R$)" : "Lance (R$)"} *
+              </Label>
               <Input
                 type="number"
                 step="0.01"
@@ -177,6 +206,39 @@ export function AdSetsStep({ data, onUpdate }: any) {
             </div>
           </div>
 
+          {/* Pixel de Conversão quando otimização = Conversões */}
+          {formData.optimizationGoal === 3 && (
+            <div className="space-y-2">
+              <Label>Pixel de Conversão *</Label>
+              <Select
+                value={formData.pixelId}
+                onValueChange={(v) => setFormData({ ...formData, pixelId: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um pixel" />
+                </SelectTrigger>
+                <SelectContent>
+                  {pixels.length === 0 ? (
+                    <SelectItem value="" disabled>
+                      Nenhum pixel encontrado
+                    </SelectItem>
+                  ) : (
+                    pixels.map((pixel) => (
+                      <SelectItem key={pixel.pixelId} value={pixel.pixelId.toString()}>
+                        {pixel.pixelName || `Pixel ${pixel.pixelId}`}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {pixels.length === 0 && (
+                <p className="text-xs text-gray-500">
+                  Nenhum pixel encontrado. Configure pixels na conta do Kwai.
+                </p>
+              )}
+            </div>
+          )}
+
           <Button onClick={handleAdd} className="w-full">
             <Plus className="w-4 h-4 mr-2" />
             {editingIndex !== null ? "Atualizar Conjunto" : "Adicionar Conjunto"}
@@ -196,9 +258,13 @@ export function AdSetsStep({ data, onUpdate }: any) {
                     <p className="font-medium">{adSet.unitName}</p>
                     <p className="text-sm text-gray-500">{adSet.websiteUrl}</p>
                     <p className="text-xs text-gray-400 mt-1">
-                      Lance: R$ {(adSet.bid / 1000000).toFixed(2)} |
+                      {adSet.optimizationGoal === 3 ? "CPA" : "Lance"}: R${" "}
+                      {(adSet.bid / 1000000).toFixed(2)} |
                       {adSet.dayBudget &&
                         ` Orçamento: R$ ${(adSet.dayBudget / 1000000).toFixed(2)}`}
+                      {adSet.optimizationGoal === 3 && adSet.pixelId && (
+                        <> | Pixel: {adSet.pixelId}</>
+                      )}
                     </p>
                   </div>
                   <div className="flex gap-2">

@@ -86,7 +86,14 @@ export async function POST(request: NextRequest) {
     }
 
     kwaiAPI.setAccessToken(tokenData.access_token);
-    const result = await kwaiAPI.createAdSet(accountId, adSetData);
+    
+    // Incluir pixelId se fornecido
+    const adSetPayload = {
+      ...adSetData,
+      ...(adSetData.pixelId && { pixelId: adSetData.pixelId }),
+    };
+    
+    const result = await kwaiAPI.createAdSet(accountId, adSetPayload);
 
     return NextResponse.json({
       success: true,

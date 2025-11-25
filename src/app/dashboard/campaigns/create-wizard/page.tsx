@@ -100,6 +100,18 @@ export default function CreateWizardPage() {
         description: wizardData.campaign!.campaignName,
       });
 
+      // Verificar se algum ad set usa LC strategy (bidType === 10)
+      // Se sim, campanha deve ter budgetType=1 (sem limite)
+      const hasLCStrategy = wizardData.adSets.some(
+        (adSet) => adSet.bidType === 10
+      );
+
+      // Se bidType é CPC (10), campanha deve ser sem limite de orçamento
+      // O orçamento fica no nível do Ad Set, não da campanha
+      const campaignBudgetType = hasLCStrategy
+        ? 1
+        : wizardData.campaign!.campaignBudgetType || 1;
+
       const campaignRes = await fetch("/api/kwai/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -109,8 +121,10 @@ export default function CreateWizardPage() {
             campaignName: wizardData.campaign!.campaignName,
             marketingGoal: wizardData.campaign!.marketingGoal,
             objective: wizardData.campaign!.objective,
-            campaignBudgetType: wizardData.campaign!.campaignBudgetType,
-            campaignBudget: wizardData.campaign!.campaignBudget,
+            campaignBudgetType: campaignBudgetType,
+            campaignBudget: hasLCStrategy
+              ? undefined
+              : wizardData.campaign!.campaignBudget,
           },
         }),
       });
