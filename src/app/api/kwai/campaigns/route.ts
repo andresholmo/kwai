@@ -87,6 +87,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { accountId, campaignData } = body;
 
+    if (!accountId || !campaignData) {
+      return NextResponse.json(
+        { error: "accountId e campaignData são obrigatórios" },
+        { status: 400 }
+      );
+    }
+
     // Buscar token
     const { data: tokenData } = await (supabase.from("kwai_tokens") as any)
       .select("access_token")
@@ -101,15 +108,35 @@ export async function POST(request: NextRequest) {
     }
 
     kwaiAPI.setAccessToken(tokenData.access_token);
-    const result = await kwaiAPI.createCampaign(accountId, campaignData);
+
+    // IMPORTANTE: Garantir que adCategory está presente
+    const campaignDataWithCategory = {
+      ...campaignData,
+      adCategory: campaignData.adCategory || 1,
+    };
+
+    const result = await kwaiAPI.createCampaign(
+      accountId,
+      campaignDataWithCategory
+    );
 
     return NextResponse.json({
       success: true,
+      message: "Campanha criada com sucesso!",
       campaign: result,
     });
   } catch (error: any) {
     console.error("Erro ao criar campanha:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Detalhes:", error.response?.data);
+    return NextResponse.json(
+      {
+        error:
+          error.response?.data?.err_msg ||
+          error.response?.data?.message ||
+          error.message,
+      },
+      { status: 500 }
+    );
   }
 }
 

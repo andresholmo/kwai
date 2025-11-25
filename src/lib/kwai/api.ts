@@ -208,15 +208,30 @@ class KwaiAPI {
       campaignName: string;
       marketingGoal: number; // 1=Awareness, 2=Consideration, 3=Conversion
       objective: number; // 1=App, 2=Website
+      adCategory?: number; // 1=Entertainment, 2=E-commerce, 4=Others
       campaignBudgetType?: number; // 1=Daily, 2=Lifetime
-      campaignBudget?: number; // em centavos
+      campaignBudget?: number; // em micro-reais
     }
   ) {
     const response = await this.client.post(
       "/rest/n/mapi/campaign/dspCampaignAddPerformance",
       {
         accountId,
-        ...campaignData,
+        adCategory: campaignData.adCategory || 1,
+        // API espera um ARRAY de campanhas
+        campaignAddModelList: [
+          {
+            campaignName: campaignData.campaignName,
+            marketingGoal: campaignData.marketingGoal,
+            objective: campaignData.objective,
+            ...(campaignData.campaignBudgetType && {
+              campaignBudgetType: campaignData.campaignBudgetType,
+            }),
+            ...(campaignData.campaignBudget && {
+              campaignBudget: campaignData.campaignBudget,
+            }),
+          },
+        ],
       }
     );
     return response.data.data;
