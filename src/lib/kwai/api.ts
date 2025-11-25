@@ -212,27 +212,86 @@ class KwaiAPI {
       campaignBudget?: number; // em micro-reais
     }
   ) {
+    const payload = {
+      accountId,
+      adCategory: 1,
+      campaignAddModelList: [
+        {
+          campaignName: campaignData.campaignName,
+          marketingGoal: campaignData.marketingGoal,
+          objective: campaignData.objective,
+          ...(campaignData.campaignBudgetType && {
+            campaignBudgetType: campaignData.campaignBudgetType,
+          }),
+          ...(campaignData.campaignBudget && {
+            campaignBudget: campaignData.campaignBudget,
+          }),
+        },
+      ],
+    };
+
+    console.log("=== KWAI API CREATE CAMPAIGN ===");
+    console.log("Endpoint:", "/rest/n/mapi/campaign/dspCampaignAddPerformance");
+    console.log("Payload:", JSON.stringify(payload, null, 2));
+    console.log("=================================");
+
     const response = await this.client.post(
       "/rest/n/mapi/campaign/dspCampaignAddPerformance",
-      {
-        accountId,
-        adCategory: 1, // SEMPRE 1 (Entertainment)
-        // API espera um ARRAY de campanhas
-        campaignAddModelList: [
-          {
-            campaignName: campaignData.campaignName,
-            marketingGoal: campaignData.marketingGoal,
-            objective: campaignData.objective,
-            ...(campaignData.campaignBudgetType && {
-              campaignBudgetType: campaignData.campaignBudgetType,
-            }),
-            ...(campaignData.campaignBudget && {
-              campaignBudget: campaignData.campaignBudget,
-            }),
-          },
-        ],
-      }
+      payload
     );
+
+    console.log("=== KWAI API RESPONSE ===");
+    console.log("Response:", JSON.stringify(response.data, null, 2));
+    console.log("=========================");
+
+    return response.data.data;
+  }
+
+  /**
+   * Criar campanha - Versão alternativa do endpoint
+   */
+  async createCampaignAlt(
+    accountId: number,
+    campaignData: {
+      campaignName: string;
+      marketingGoal: number;
+      objective: number;
+      campaignBudgetType?: number;
+      campaignBudget?: number;
+    }
+  ) {
+    // Tentar endpoint sem "Performance" no final
+    const payload = {
+      accountId,
+      adCategory: 1,
+      campaignAddModelList: [
+        {
+          campaignName: campaignData.campaignName,
+          marketingGoal: campaignData.marketingGoal,
+          objective: campaignData.objective,
+          ...(campaignData.campaignBudgetType && {
+            campaignBudgetType: campaignData.campaignBudgetType,
+          }),
+          ...(campaignData.campaignBudget && {
+            campaignBudget: campaignData.campaignBudget,
+          }),
+        },
+      ],
+    };
+
+    console.log("=== TRYING ALTERNATIVE ENDPOINT ===");
+    console.log("Endpoint:", "/rest/n/mapi/campaign/dspCampaignAdd");
+    console.log("Payload:", JSON.stringify(payload, null, 2));
+
+    const response = await this.client.post(
+      "/rest/n/mapi/campaign/dspCampaignAdd", // Sem "Performance"
+      payload
+    );
+
+    console.log("=== ALTERNATIVE ENDPOINT RESPONSE ===");
+    console.log("Response:", JSON.stringify(response.data, null, 2));
+    console.log("====================================");
+
     return response.data.data;
   }
 

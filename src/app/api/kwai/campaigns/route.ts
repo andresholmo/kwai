@@ -94,7 +94,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar token
+    console.log("=== CAMPAIGN CREATION REQUEST ===");
+    console.log("Account ID:", accountId);
+    console.log("Campaign Data:", JSON.stringify(campaignData, null, 2));
+
     const { data: tokenData } = await (supabase.from("kwai_tokens") as any)
       .select("access_token")
       .eq("user_id", user.id)
@@ -109,10 +112,34 @@ export async function POST(request: NextRequest) {
 
     kwaiAPI.setAccessToken(tokenData.access_token);
 
-    console.log("Creating campaign with data:", JSON.stringify(campaignData, null, 2));
+    let result;
+    let lastError;
 
-    // campaignData NÃO deve ter adCategory - será adicionado no método createCampaign
-    const result = await kwaiAPI.createCampaign(accountId, campaignData);
+    // Tentar endpoint principal
+    try {
+      console.log("Trying main endpoint...");
+      result = await kwaiAPI.createCampaign(accountId, campaignData);
+      console.log("Main endpoint SUCCESS");
+    } catch (error: any) {
+      console.log(
+        "Main endpoint FAILED:",
+        error.response?.data?.message || error.message
+      );
+      lastError = error;
+
+      // Tentar endpoint alternativo
+      try {
+        console.log("Trying alternative endpoint...");
+        result = await kwaiAPI.createCampaignAlt(accountId, campaignData);
+        console.log("Alternative endpoint SUCCESS");
+      } catch (altError: any) {
+        console.log(
+          "Alternative endpoint FAILED:",
+          altError.response?.data?.message || altError.message
+        );
+        throw lastError; // Lançar o erro original
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -120,13 +147,17 @@ export async function POST(request: NextRequest) {
       campaign: result,
     });
   } catch (error: any) {
-    console.error("Erro ao criar campanha:", error);
-    console.error("Detalhes:", error.response?.data);
+    console.error("=== FINAL ERROR ===");
+    console.error("Status:", error.response?.status);
+    console.error("Message:", error.response?.data?.message || error.message);
+    console.error("Full error:", JSON.stringify(error.response?.data, null, 2));
+    console.error("===================");
+
     return NextResponse.json(
       {
         error:
-          error.response?.data?.err_msg ||
           error.response?.data?.message ||
+          error.response?.data?.err_msg ||
           error.message,
       },
       { status: 500 }
