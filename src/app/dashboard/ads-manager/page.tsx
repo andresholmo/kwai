@@ -126,22 +126,29 @@ export default function AdsManagerPage() {
     setLoading(true);
     try {
       console.log("=== FETCHING AD SETS ===");
-      console.log("Account:", selectedAccount);
       console.log("Campaign:", campaignId);
 
-      // IMPORTANTE: Passar campaignId para filtrar
-      const res = await fetch(
-        `/api/kwai/ad-sets?accountId=${selectedAccount}&campaignId=${campaignId}`
-      );
+      // API retorna TODOS os ad sets, então não passamos campaignId
+      const res = await fetch(`/api/kwai/ad-sets?accountId=${selectedAccount}`);
       const data = await res.json();
 
-      console.log("Ad Sets response:", data);
-      console.log("Ad Sets count:", data.adSets?.length || 0);
+      console.log("Total ad sets from API:", data.adSets?.length || 0);
 
       if (data.success) {
-        const filtered = removeDuplicates(data.adSets || [], "unitId");
-        console.log("Filtered ad sets:", filtered.length);
-        setAdSets(filtered);
+        // FILTRAR NO FRONTEND por campaignId
+        const allAdSets = data.adSets || [];
+        const filtered = allAdSets.filter(
+          (adSet: any) => adSet.campaignId === campaignId
+        );
+
+        console.log(
+          "Filtered ad sets for campaign",
+          campaignId,
+          ":",
+          filtered.length
+        );
+
+        setAdSets(removeDuplicates(filtered, "unitId"));
       }
     } catch (error) {
       console.error("Erro ao buscar ad sets:", error);
@@ -155,22 +162,29 @@ export default function AdsManagerPage() {
     setLoading(true);
     try {
       console.log("=== FETCHING ADS ===");
-      console.log("Account:", selectedAccount);
       console.log("Unit:", unitId);
 
-      // IMPORTANTE: Passar unitId para filtrar
-      const res = await fetch(
-        `/api/kwai/creatives?accountId=${selectedAccount}&unitId=${unitId}`
-      );
+      // API retorna TODOS os criativos, então não passamos unitId
+      const res = await fetch(`/api/kwai/creatives?accountId=${selectedAccount}`);
       const data = await res.json();
 
-      console.log("Ads response:", data);
-      console.log("Ads count:", data.creatives?.length || 0);
+      console.log("Total creatives from API:", data.creatives?.length || 0);
 
       if (data.success) {
-        const filtered = removeDuplicates(data.creatives || [], "creativeId");
-        console.log("Filtered ads:", filtered.length);
-        setAds(filtered);
+        // FILTRAR NO FRONTEND por unitId
+        const allCreatives = data.creatives || [];
+        const filtered = allCreatives.filter(
+          (creative: any) => creative.unitId === unitId
+        );
+
+        console.log(
+          "Filtered creatives for unit",
+          unitId,
+          ":",
+          filtered.length
+        );
+
+        setAds(removeDuplicates(filtered, "creativeId"));
       }
     } catch (error) {
       console.error("Erro ao buscar anúncios:", error);

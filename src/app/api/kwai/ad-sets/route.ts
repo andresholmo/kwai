@@ -15,11 +15,10 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const accountId = searchParams.get("accountId");
-    const campaignId = searchParams.get("campaignId");
 
     console.log("=== API AD-SETS GET ===");
     console.log("accountId:", accountId);
-    console.log("campaignId:", campaignId);
+    console.log("Note: Fetching ALL ad sets (API ignores campaignId filter)");
     console.log("=======================");
 
     if (!accountId) {
@@ -40,18 +39,10 @@ export async function GET(request: NextRequest) {
 
     kwaiAPI.setAccessToken(tokenData.access_token);
 
-    let adSets;
+    // Buscar TODOS os ad sets (API ignora campaignId)
+    const adSets = await kwaiAPI.getAdSets(parseInt(accountId));
 
-    if (campaignId) {
-      console.log("Calling getAdSets WITH campaignId:", campaignId);
-      adSets = await kwaiAPI.getAdSets(parseInt(accountId), parseInt(campaignId));
-    } else {
-      console.log("Calling getAdSets WITHOUT campaignId");
-      adSets = await kwaiAPI.getAdSets(parseInt(accountId));
-    }
-
-    console.log("Ad Sets returned:", adSets?.data?.length || 0);
-    console.log("Ad Sets total:", adSets?.total || 0);
+    console.log("Total ad sets returned:", adSets?.data?.length || 0);
 
     return NextResponse.json({
       success: true,

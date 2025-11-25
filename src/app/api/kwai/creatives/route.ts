@@ -15,11 +15,10 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const accountId = searchParams.get("accountId");
-    const unitId = searchParams.get("unitId");
 
     console.log("=== API CREATIVES GET ===");
     console.log("accountId:", accountId);
-    console.log("unitId:", unitId);
+    console.log("Note: Fetching ALL creatives (API ignores unitId filter)");
     console.log("========================");
 
     if (!accountId) {
@@ -40,18 +39,10 @@ export async function GET(request: NextRequest) {
 
     kwaiAPI.setAccessToken(tokenData.access_token);
 
-    let creatives;
+    // Buscar TODOS os criativos (API ignora unitId)
+    const creatives = await kwaiAPI.getCreatives(parseInt(accountId));
 
-    if (unitId) {
-      console.log("Calling getCreatives WITH unitId:", unitId);
-      creatives = await kwaiAPI.getCreatives(parseInt(accountId), parseInt(unitId));
-    } else {
-      console.log("Calling getCreatives WITHOUT unitId");
-      creatives = await kwaiAPI.getCreatives(parseInt(accountId));
-    }
-
-    console.log("Creatives returned:", creatives?.data?.length || 0);
-    console.log("Creatives total:", creatives?.total || 0);
+    console.log("Total creatives returned:", creatives?.data?.length || 0);
 
     return NextResponse.json({
       success: true,
