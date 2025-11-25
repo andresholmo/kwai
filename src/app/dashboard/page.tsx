@@ -371,13 +371,13 @@ export default function DashboardPage() {
               Siga o fluxo completo para criar sua campanha
             </p>
             <Button
-              onClick={() => router.push("/dashboard/campaigns/new")}
+              onClick={() => router.push("/dashboard/campaigns/create-wizard")}
               className="w-full bg-blue-600 hover:bg-blue-700"
             >
-              1. Criar Campanha →
+              🚀 Criar Campanha Completa
             </Button>
             <p className="text-xs text-blue-600 mt-2">
-              Após criar a campanha, você será guiado para criar o conjunto e os criativos
+              Configure campanha, conjuntos e criativos em um único fluxo
             </p>
           </CardContent>
         </Card>
