@@ -31,20 +31,42 @@ export function CreativesStep({ data, onUpdate }: any) {
   const accountId = data.campaign?.accountId;
 
   const fetchMaterials = async () => {
-    if (!accountId) return;
+    if (!accountId) {
+      console.log("No accountId, skipping materials fetch");
+      console.log("Data:", data);
+      console.log("Campaign:", data.campaign);
+      return;
+    }
 
+    console.log("Fetching materials for account:", accountId);
     setLoadingMaterials(true);
+    
     try {
       const res = await fetch(
         `/api/kwai/materials-from-creatives?accountId=${accountId}`
       );
+      
+      if (!res.ok) {
+        console.error("API error:", res.status, res.statusText);
+        const errorText = await res.text();
+        console.error("Error response:", errorText);
+        setMaterials([]);
+        return;
+      }
+      
       const dataRes = await res.json();
-
-      if (dataRes.success) {
-        setMaterials(dataRes.materials || []);
+      console.log("Materials response:", dataRes);
+      
+      if (dataRes.success && dataRes.materials) {
+        setMaterials(dataRes.materials);
+        console.log("Materials set:", dataRes.materials.length);
+      } else {
+        console.log("No materials in response or success=false");
+        setMaterials([]);
       }
     } catch (error) {
       console.error("Erro ao buscar materiais:", error);
+      setMaterials([]);
     } finally {
       setLoadingMaterials(false);
     }
@@ -53,6 +75,8 @@ export function CreativesStep({ data, onUpdate }: any) {
   useEffect(() => {
     if (accountId) {
       fetchMaterials();
+    } else {
+      console.log("Waiting for accountId...");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId]);
