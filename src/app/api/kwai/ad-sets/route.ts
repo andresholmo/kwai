@@ -95,8 +95,31 @@ export async function POST(request: NextRequest) {
     
     const result = await kwaiAPI.createAdSet(accountId, adSetPayload);
 
+    console.log("Ad Set result:", JSON.stringify(result, null, 2));
+
+    // Extrair unitId - tentar múltiplos caminhos
+    const unitId =
+      result.unitId || // Do retorno modificado
+      result.data?.data?.[0]?.unitId || // Estrutura original
+      result.data?.[0]?.unitId; // Alternativa
+
+    console.log("Using unitId:", unitId);
+
+    if (!unitId) {
+      console.error("UnitId not found in response");
+      return NextResponse.json(
+        {
+          success: false,
+          error: "UnitId não encontrado na resposta da API",
+          debug: result,
+        },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
+      unitId: unitId,
       adSet: result,
     });
   } catch (error: any) {

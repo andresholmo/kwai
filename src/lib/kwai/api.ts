@@ -332,7 +332,27 @@ class KwaiAPI {
       payload
     );
 
-    return response.data;
+    console.log("=== CREATE CAMPAIGN RESPONSE ===");
+    console.log(JSON.stringify(response.data, null, 2));
+
+    // Extrair campaignId da estrutura correta: response.data.data[0].campaignId
+    const campaignId =
+      response.data?.data?.data?.[0]?.campaignId ||
+      response.data?.data?.[0]?.campaignId ||
+      response.data?.campaignId;
+
+    console.log("Extracted campaignId:", campaignId);
+
+    if (!campaignId) {
+      console.error("Could not extract campaignId from response");
+      console.error("Response structure:", JSON.stringify(response.data, null, 2));
+    }
+
+    // Retornar com campaignId no nível superior para facilitar
+    return {
+      ...response.data,
+      campaignId: campaignId,
+    };
   }
 
   /**
@@ -445,7 +465,23 @@ class KwaiAPI {
         ...adSetData,
       }
     );
-    return response.data.data;
+
+    console.log("=== CREATE AD SET RESPONSE ===");
+    console.log(JSON.stringify(response.data, null, 2));
+
+    // Extrair unitId da estrutura correta: response.data.data[0].unitId
+    const unitId =
+      response.data?.data?.data?.[0]?.unitId ||
+      response.data?.data?.[0]?.unitId ||
+      response.data?.unitId;
+
+    console.log("Extracted unitId:", unitId);
+
+    // Retornar com unitId no nível superior para facilitar
+    return {
+      ...response.data,
+      unitId: unitId,
+    };
   }
 
   /**
@@ -625,7 +661,23 @@ class KwaiAPI {
         ...creativePayload,
       }
     );
-    return response.data.data;
+
+    console.log("=== CREATE CREATIVE RESPONSE ===");
+    console.log(JSON.stringify(response.data, null, 2));
+
+    // Extrair creativeId da estrutura correta: response.data.data[0].creativeId
+    const creativeId =
+      response.data?.data?.data?.[0]?.creativeId ||
+      response.data?.data?.[0]?.creativeId ||
+      response.data?.creativeId;
+
+    console.log("Extracted creativeId:", creativeId);
+
+    // Retornar com creativeId no nível superior para facilitar
+    return {
+      ...response.data,
+      creativeId: creativeId,
+    };
   }
 
   /**

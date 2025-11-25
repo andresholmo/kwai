@@ -88,8 +88,31 @@ export async function POST(request: NextRequest) {
     kwaiAPI.setAccessToken(tokenData.access_token);
     const result = await kwaiAPI.createCreative(accountId, creativeData);
 
+    console.log("Creative result:", JSON.stringify(result, null, 2));
+
+    // Extrair creativeId - tentar múltiplos caminhos
+    const creativeId =
+      result.creativeId || // Do retorno modificado
+      result.data?.data?.[0]?.creativeId || // Estrutura original
+      result.data?.[0]?.creativeId; // Alternativa
+
+    console.log("Using creativeId:", creativeId);
+
+    if (!creativeId) {
+      console.error("CreativeId not found in response");
+      return NextResponse.json(
+        {
+          success: false,
+          error: "CreativeId não encontrado na resposta da API",
+          debug: result,
+        },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
+      creativeId: creativeId,
       creative: result,
     });
   } catch (error: any) {

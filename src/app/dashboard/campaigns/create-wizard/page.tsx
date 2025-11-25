@@ -153,13 +153,17 @@ export default function CreateWizardPage() {
         throw new Error(campaignResponse.error || "Erro ao criar campanha");
       }
 
-      // Extrair campaignId
+      // Extrair campaignId - tentar múltiplos caminhos
       const campaignId =
-        campaignResponse.campaignId ||
+        campaignResponse.campaignId || // Do retorno modificado da API route
         campaignResponse.campaign?.campaignId ||
-        campaignResponse.campaign?.[0]?.campaignId ||
-        campaignResponse.campaign?.data?.campaignId ||
-        campaignResponse.campaign?.data?.[0]?.campaignId;
+        campaignResponse.campaign?.data?.data?.[0]?.campaignId || // Estrutura original da API Kwai
+        campaignResponse.campaign?.data?.[0]?.campaignId ||
+        campaignResponse.data?.data?.[0]?.campaignId; // Fallback direto
+
+      console.log("=== WIZARD: Extracted campaignId ===");
+      console.log("campaignId:", campaignId);
+      console.log("Full response:", JSON.stringify(campaignResponse, null, 2));
 
       if (!campaignId) {
         console.error("Campaign response:", campaignResponse);
@@ -212,10 +216,17 @@ export default function CreateWizardPage() {
             continue;
           }
 
+          // Extrair unitId - tentar múltiplos caminhos
           const unitId =
+            adSetData.unitId || // Do retorno modificado da API route
             adSetData.adSet?.unitId ||
-            adSetData.adSet?.[0]?.unitId ||
-            adSetData.unitId;
+            adSetData.adSet?.data?.data?.[0]?.unitId || // Estrutura original da API Kwai
+            adSetData.adSet?.data?.[0]?.unitId ||
+            adSetData.data?.data?.[0]?.unitId; // Fallback direto
+
+          console.log("=== WIZARD: Extracted unitId ===");
+          console.log("unitId:", unitId);
+          console.log("Full adSetData:", JSON.stringify(adSetData, null, 2));
 
           if (unitId) {
             adSetIds.push({ index: i, unitId, name: adSet.unitName });

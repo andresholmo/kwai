@@ -118,9 +118,32 @@ export async function POST(request: NextRequest) {
     kwaiAPI.setAccessToken(tokenData.access_token);
     const result = await kwaiAPI.createCampaign(accountId, campaignData);
 
+    console.log("Campaign result:", JSON.stringify(result, null, 2));
+
+    // Extrair campaignId - tentar múltiplos caminhos
+    const campaignId =
+      result.campaignId || // Do retorno modificado
+      result.data?.data?.[0]?.campaignId || // Estrutura original
+      result.data?.[0]?.campaignId; // Alternativa
+
+    console.log("Using campaignId:", campaignId);
+
+    if (!campaignId) {
+      console.error("CampaignId not found in response");
+      return NextResponse.json(
+        {
+          success: false,
+          error: "CampaignId não encontrado na resposta da API",
+          debug: result,
+        },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       message: "Campanha criada com sucesso!",
+      campaignId: campaignId,
       campaign: result,
     });
   } catch (error: any) {
