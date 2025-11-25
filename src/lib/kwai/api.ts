@@ -369,22 +369,41 @@ class KwaiAPI {
    */
   async getAdSets(
     accountId: number,
-    campaignId: number,
+    campaignId?: number,
     params?: {
       pageNo?: number;
       pageSize?: number;
     }
   ) {
+    console.log("=== kwaiAPI.getAdSets ===");
+    console.log("accountId:", accountId);
+    console.log("campaignId:", campaignId);
+
+    const payload: any = {
+      accountId,
+      pageNo: params?.pageNo || 1,
+      pageSize: params?.pageSize || 100,
+      adCategory: 1,
+    };
+
+    // IMPORTANTE: Se campaignId foi passado, adicionar ao payload
+    if (campaignId) {
+      payload.campaignId = campaignId;
+      console.log("Adding campaignId to payload:", campaignId);
+    } else {
+      console.log("NO campaignId - will return ALL ad sets");
+    }
+
+    console.log("Final payload:", JSON.stringify(payload, null, 2));
+
     const response = await this.client.post(
       "/rest/n/mapi/unit/dspUnitPageQueryPerformance",
-      {
-        accountId,
-        campaignId,
-        adCategory: 1,
-        pageNo: params?.pageNo || 1,
-        pageSize: params?.pageSize || 20,
-      }
+      payload
     );
+
+    console.log("Response total:", response.data.data?.total || 0);
+    console.log("Response items:", response.data.data?.data?.length || 0);
+
     return response.data.data;
   }
 
@@ -520,22 +539,41 @@ class KwaiAPI {
    */
   async getCreatives(
     accountId: number,
-    unitId: number,
+    unitId?: number,
     params?: {
       pageNo?: number;
       pageSize?: number;
     }
   ) {
+    console.log("=== kwaiAPI.getCreatives ===");
+    console.log("accountId:", accountId);
+    console.log("unitId:", unitId);
+
+    const payload: any = {
+      accountId,
+      pageNo: params?.pageNo || 1,
+      pageSize: params?.pageSize || 100,
+      adCategory: 1,
+    };
+
+    // IMPORTANTE: Se unitId foi passado, adicionar ao payload
+    if (unitId) {
+      payload.unitId = unitId;
+      console.log("Adding unitId to payload:", unitId);
+    } else {
+      console.log("NO unitId - will return ALL creatives");
+    }
+
+    console.log("Final payload:", JSON.stringify(payload, null, 2));
+
     const response = await this.client.post(
       "/rest/n/mapi/creative/dspCreativePageQueryPerformance",
-      {
-        accountId,
-        unitId,
-        adCategory: 1,
-        pageNo: params?.pageNo || 1,
-        pageSize: params?.pageSize || 20,
-      }
+      payload
     );
+
+    console.log("Response total:", response.data.data?.total || 0);
+    console.log("Response items:", response.data.data?.data?.length || 0);
+
     return response.data.data;
   }
 

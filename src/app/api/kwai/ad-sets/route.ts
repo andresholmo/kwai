@@ -17,11 +17,13 @@ export async function GET(request: NextRequest) {
     const accountId = searchParams.get("accountId");
     const campaignId = searchParams.get("campaignId");
 
-    if (!accountId || !campaignId) {
-      return NextResponse.json(
-        { error: "accountId and campaignId required" },
-        { status: 400 }
-      );
+    console.log("=== API AD-SETS GET ===");
+    console.log("accountId:", accountId);
+    console.log("campaignId:", campaignId);
+    console.log("=======================");
+
+    if (!accountId) {
+      return NextResponse.json({ error: "accountId required" }, { status: 400 });
     }
 
     const { data: tokenData } = await (supabase.from("kwai_tokens") as any)
@@ -37,10 +39,19 @@ export async function GET(request: NextRequest) {
     }
 
     kwaiAPI.setAccessToken(tokenData.access_token);
-    const adSets = await kwaiAPI.getAdSets(
-      parseInt(accountId),
-      parseInt(campaignId)
-    );
+
+    let adSets;
+
+    if (campaignId) {
+      console.log("Calling getAdSets WITH campaignId:", campaignId);
+      adSets = await kwaiAPI.getAdSets(parseInt(accountId), parseInt(campaignId));
+    } else {
+      console.log("Calling getAdSets WITHOUT campaignId");
+      adSets = await kwaiAPI.getAdSets(parseInt(accountId));
+    }
+
+    console.log("Ad Sets returned:", adSets?.data?.length || 0);
+    console.log("Ad Sets total:", adSets?.total || 0);
 
     return NextResponse.json({
       success: true,
@@ -49,7 +60,11 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("Erro ao buscar ad sets:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      total: 0,
+      adSets: [],
+    });
   }
 }
 

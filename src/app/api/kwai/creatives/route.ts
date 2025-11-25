@@ -17,11 +17,13 @@ export async function GET(request: NextRequest) {
     const accountId = searchParams.get("accountId");
     const unitId = searchParams.get("unitId");
 
-    if (!accountId || !unitId) {
-      return NextResponse.json(
-        { error: "accountId and unitId required" },
-        { status: 400 }
-      );
+    console.log("=== API CREATIVES GET ===");
+    console.log("accountId:", accountId);
+    console.log("unitId:", unitId);
+    console.log("========================");
+
+    if (!accountId) {
+      return NextResponse.json({ error: "accountId required" }, { status: 400 });
     }
 
     const { data: tokenData } = await (supabase.from("kwai_tokens") as any)
@@ -37,15 +39,19 @@ export async function GET(request: NextRequest) {
     }
 
     kwaiAPI.setAccessToken(tokenData.access_token);
-    const creatives = await kwaiAPI.getCreatives(parseInt(accountId), parseInt(unitId));
 
-    // Log para debug
-    if (creatives?.data?.length > 0) {
-      console.log(
-        "Exemplo de criativo:",
-        JSON.stringify(creatives.data[0], null, 2)
-      );
+    let creatives;
+
+    if (unitId) {
+      console.log("Calling getCreatives WITH unitId:", unitId);
+      creatives = await kwaiAPI.getCreatives(parseInt(accountId), parseInt(unitId));
+    } else {
+      console.log("Calling getCreatives WITHOUT unitId");
+      creatives = await kwaiAPI.getCreatives(parseInt(accountId));
     }
+
+    console.log("Creatives returned:", creatives?.data?.length || 0);
+    console.log("Creatives total:", creatives?.total || 0);
 
     return NextResponse.json({
       success: true,
