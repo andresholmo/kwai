@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Video, Image } from "lucide-react";
 
 export function CreativesStep({ data, onUpdate }: any) {
   const [materials, setMaterials] = useState<any[]>([]);
@@ -167,25 +167,63 @@ export function CreativesStep({ data, onUpdate }: any) {
 
             <div className="space-y-2">
               <Label>Material (Opcional)</Label>
-              <Select
-                value={formData.materialId}
-                onValueChange={(v) => setFormData({ ...formData, materialId: v })}
-                disabled={materials.length === 0}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o material" />
-                </SelectTrigger>
-                <SelectContent>
-                  {materials.map((material) => (
-                    <SelectItem key={material.materialId} value={material.materialId.toString()}>
-                      {material.materialName || `Material ${material.materialId}`} (
-                      {material.materialType === 1 ? "Vídeo" : "Imagem"})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {materials.length === 0 && (
-                <p className="text-xs text-gray-500">Nenhum material encontrado</p>
+              {materials.length > 0 ? (
+                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto border rounded p-2">
+                  {materials.map((material) => {
+                    const isSelected = formData.materialId === material.materialId?.toString();
+                    return (
+                      <div
+                        key={material.materialId}
+                        className={`
+                          border-2 rounded p-2 cursor-pointer transition-colors
+                          ${isSelected ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}
+                        `}
+                        onClick={() =>
+                          setFormData({
+                            ...formData,
+                            materialId: isSelected ? "" : material.materialId?.toString() || "",
+                          })
+                        }
+                      >
+                        {material.materialType === 1 || material.materialType === "video" ? (
+                          <div className="aspect-video bg-gray-100 rounded flex items-center justify-center">
+                            <Video className="w-8 h-8 text-gray-400" />
+                          </div>
+                        ) : (
+                          <div className="aspect-video bg-gray-100 rounded flex items-center justify-center overflow-hidden">
+                            {material.url || material.coverUrl ? (
+                              <img
+                                src={material.url || material.coverUrl}
+                                alt={material.materialName}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <Image className="w-8 h-8 text-gray-400" />
+                            )}
+                          </div>
+                        )}
+                        <p className="text-xs mt-1 truncate">
+                          {material.materialName || `Material ${material.materialId}`}
+                        </p>
+                        {isSelected && (
+                          <p className="text-xs text-blue-600 font-medium">Selecionado</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="border rounded p-4 text-center">
+                  <p className="text-sm text-gray-500">
+                    Nenhum material encontrado na biblioteca
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Faça upload de materiais na página de Materiais primeiro
+                  </p>
+                </div>
               )}
             </div>
           </div>
