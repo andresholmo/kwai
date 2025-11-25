@@ -109,16 +109,10 @@ export async function POST(request: NextRequest) {
 
     kwaiAPI.setAccessToken(tokenData.access_token);
 
-    // IMPORTANTE: Garantir que adCategory está presente
-    const campaignDataWithCategory = {
-      ...campaignData,
-      adCategory: campaignData.adCategory || 1,
-    };
+    console.log("Creating campaign with data:", JSON.stringify(campaignData, null, 2));
 
-    const result = await kwaiAPI.createCampaign(
-      accountId,
-      campaignDataWithCategory
-    );
+    // campaignData NÃO deve ter adCategory - será adicionado no método createCampaign
+    const result = await kwaiAPI.createCampaign(accountId, campaignData);
 
     return NextResponse.json({
       success: true,

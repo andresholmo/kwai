@@ -208,7 +208,6 @@ class KwaiAPI {
       campaignName: string;
       marketingGoal: number; // 1=Awareness, 2=Consideration, 3=Conversion
       objective: number; // 1=App, 2=Website
-      adCategory?: number; // 1=Entertainment, 2=E-commerce, 4=Others
       campaignBudgetType?: number; // 1=Daily, 2=Lifetime
       campaignBudget?: number; // em micro-reais
     }
@@ -217,7 +216,7 @@ class KwaiAPI {
       "/rest/n/mapi/campaign/dspCampaignAddPerformance",
       {
         accountId,
-        adCategory: campaignData.adCategory || 1,
+        adCategory: 1, // SEMPRE 1 (Entertainment)
         // API espera um ARRAY de campanhas
         campaignAddModelList: [
           {

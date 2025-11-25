@@ -28,7 +28,6 @@ export default function NewCampaignPage() {
     campaignName: "",
     marketingGoal: "3", // 1=Awareness, 2=Consideration, 3=Conversion
     objective: "2", // 1=App, 2=Website
-    adCategory: "1", // 1=Entertainment, 2=E-commerce, 4=Others
     campaignBudgetType: "1", // 1=Daily, 2=Lifetime
     campaignBudget: "",
   });
@@ -77,8 +76,10 @@ export default function NewCampaignPage() {
             campaignName: formData.campaignName.trim(),
             marketingGoal: parseInt(formData.marketingGoal),
             objective: parseInt(formData.objective),
-            adCategory: parseInt(formData.adCategory),
-            campaignBudgetType: parseInt(formData.campaignBudgetType),
+            // NÃO enviar adCategory aqui - será adicionado na API
+            ...(formData.campaignBudgetType && {
+              campaignBudgetType: parseInt(formData.campaignBudgetType),
+            }),
             // Converter para micro-reais se tiver budget
             ...(formData.campaignBudget && {
               campaignBudget: reaisToMicro(parseFloat(formData.campaignBudget)),
@@ -171,24 +172,6 @@ export default function NewCampaignPage() {
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label>Categoria do Anúncio *</Label>
-                <Select
-                  value={formData.adCategory}
-                  onValueChange={(value) =>
-                    setFormData({ ...formData, adCategory: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Entretenimento</SelectItem>
-                    <SelectItem value="2">E-commerce</SelectItem>
-                    <SelectItem value="4">Outros</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </CardContent>
           </Card>
 
