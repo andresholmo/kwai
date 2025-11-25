@@ -95,7 +95,11 @@ export default function CreateWizardPage() {
 
     try {
       // 1. Criar campanha
-      toast({ title: "1/3 Criando campanha..." });
+      toast({
+        title: "📝 Criando campanha...",
+        description: wizardData.campaign!.campaignName,
+      });
+
       const campaignRes = await fetch("/api/kwai/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -112,88 +116,164 @@ export default function CreateWizardPage() {
       });
 
       const campaignData = await campaignRes.json();
-      if (!campaignData.success) throw new Error(campaignData.error || "Erro ao criar campanha");
 
-      const campaignId =
-        campaignData.campaign?.campaignId ||
-        campaignData.campaign?.[0]?.campaignId ||
-        campaignData.campaignId;
-
-      if (!campaignId) throw new Error("CampaignId não encontrado na resposta");
-
-      // 2. Criar ad sets
-      toast({ title: "2/3 Criando conjuntos de anúncios..." });
-      const adSetIds: number[] = [];
-
-      for (const adSet of wizardData.adSets) {
-        const adSetRes = await fetch("/api/kwai/ad-sets", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            accountId: parseInt(wizardData.campaign!.accountId),
-            adSetData: {
-              campaignId: campaignId,
-              unitName: adSet.unitName,
-              websiteUrl: adSet.websiteUrl,
-              optimizeTarget: adSet.optimizationGoal,
-              bidType: adSet.bidType,
-              bid: adSet.bid,
-              ...(adSet.dayBudget && { unitBudget: adSet.dayBudget }),
-              scheduleStartTime: new Date().toISOString().split("T")[0] + " 00:00:00",
-              gender: adSet.gender === 3 ? 0 : adSet.gender,
-              region: [76], // Brasil
-            },
-          }),
-        });
-
-        const adSetData = await adSetRes.json();
-        if (!adSetData.success)
-          throw new Error(adSetData.error || `Erro ao criar ad set: ${adSet.unitName}`);
-
-        const unitId = adSetData.adSet?.unitId || adSetData.adSet?.[0]?.unitId || adSetData.unitId;
-
-        if (unitId) adSetIds.push(unitId);
+      if (!campaignData.success) {
+        throw new Error(campaignData.error || "Erro ao criar campanha");
       }
 
-      // 3. Criar criativos
-      toast({ title: "3/3 Criando criativos..." });
+      // Extrair campaignId
+      const campaignId =
+        campaignData.campaignId ||
+        campaignData.campaign?.campaignId ||
+        campaignData.campaign?.[0]?.campaignId ||
+        campaignData.campaign?.data?.campaignId ||
+        campaignData.campaign?.data?.[0]?.campaignId;
 
-      for (const creative of wizardData.creatives) {
-        const unitId = adSetIds[creative.adSetIndex];
-        if (!unitId) continue;
+      if (!campaignId) {
+        console.error("Campaign response:", campaignData);
+        throw new Error("CampaignId não encontrado na resposta da API");
+      }
 
-        const creativeRes = await fetch("/api/kwai/creatives", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            accountId: parseInt(wizardData.campaign!.accountId),
-            creativeData: {
-              unitId: unitId,
-              creativeName: creative.creativeName,
-              description: creative.description,
-              actionUrl: creative.actionUrl,
-              actionType: creative.actionType,
-              ...(creative.materialId && { materialId: creative.materialId }),
-            },
-          }),
+      toast({ title: "✅ Campanha criada!", description: `ID: ${campaignId}` });
+
+      // 2. Criar ad sets
+      const adSetIds: { index: number; unitId: number; name: string }[] = [];
+
+      for (let i = 0; i < wizardData.adSets.length; i++) {
+        const adSet = wizardData.adSets[i];
+
+        toast({
+          title: `📝 Criando conjunto ${i + 1}/${wizardData.adSets.length}...`,
+          description: adSet.unitName,
         });
 
-        const creativeData = await creativeRes.json();
-        if (!creativeData.success) {
-          console.error(`Erro ao criar criativo: ${creative.creativeName}`);
+        try {
+          const adSetRes = await fetch("/api/kwai/ad-sets", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              accountId: parseInt(wizardData.campaign!.accountId),
+              adSetData: {
+                campaignId: campaignId,
+                unitName: adSet.unitName,
+                websiteUrl: adSet.websiteUrl,
+                optimizeTarget: adSet.optimizationGoal,
+                bidType: adSet.bidType,
+                bid: adSet.bid,
+                ...(adSet.dayBudget && { unitBudget: adSet.dayBudget }),
+                scheduleStartTime: new Date().toISOString().split("T")[0] + " 00:00:00",
+                gender: adSet.gender === 3 ? 0 : adSet.gender,
+                region: [76], // Brasil
+              },
+            }),
+          });
+
+          const adSetData = await adSetRes.json();
+
+          if (!adSetData.success) {
+            console.error(`Erro ao criar ad set ${adSet.unitName}:`, adSetData);
+            toast({
+              title: `⚠️ Erro no conjunto "${adSet.unitName}"`,
+              description: adSetData.error || "Erro desconhecido",
+              variant: "destructive",
+            });
+            continue;
+          }
+
+          const unitId =
+            adSetData.adSet?.unitId ||
+            adSetData.adSet?.[0]?.unitId ||
+            adSetData.unitId;
+
+          if (unitId) {
+            adSetIds.push({ index: i, unitId, name: adSet.unitName });
+            toast({ title: "✅ Conjunto criado!", description: adSet.unitName });
+          }
+        } catch (error: any) {
+          console.error(`Erro ao criar ad set ${adSet.unitName}:`, error);
+          toast({
+            title: `⚠️ Erro no conjunto "${adSet.unitName}"`,
+            description: error.message,
+            variant: "destructive",
+          });
         }
       }
 
-      // Sucesso!
+      if (adSetIds.length === 0) {
+        throw new Error("Nenhum conjunto de anúncios foi criado com sucesso");
+      }
+
+      // 3. Criar criativos
+      let createdCount = 0;
+
+      for (let i = 0; i < wizardData.creatives.length; i++) {
+        const creative = wizardData.creatives[i];
+        const adSetMapping = adSetIds.find((as) => as.index === creative.adSetIndex);
+
+        if (!adSetMapping) {
+          console.warn(`Ad set não encontrado para criativo ${creative.creativeName}`);
+          continue;
+        }
+
+        toast({
+          title: `📝 Criando criativo ${i + 1}/${wizardData.creatives.length}...`,
+          description: `${creative.creativeName} → ${adSetMapping.name}`,
+        });
+
+        try {
+          const creativeRes = await fetch("/api/kwai/creatives", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              accountId: parseInt(wizardData.campaign!.accountId),
+              creativeData: {
+                unitId: adSetMapping.unitId,
+                creativeName: creative.creativeName,
+                description: creative.description || undefined,
+                actionUrl: creative.actionUrl,
+                actionType: creative.actionType,
+                ...(creative.materialId && { materialId: creative.materialId }),
+              },
+            }),
+          });
+
+          const creativeData = await creativeRes.json();
+
+          if (creativeData.success) {
+            createdCount++;
+            toast({ title: "✅ Criativo criado!", description: creative.creativeName });
+          } else {
+            console.error(`Erro ao criar criativo ${creative.creativeName}:`, creativeData);
+            toast({
+              title: `⚠️ Erro no criativo "${creative.creativeName}"`,
+              description: creativeData.error || "Erro desconhecido",
+              variant: "destructive",
+            });
+          }
+        } catch (error: any) {
+          console.error(`Erro ao criar criativo ${creative.creativeName}:`, error);
+          toast({
+            title: `⚠️ Erro no criativo "${creative.creativeName}"`,
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+      }
+
+      // Sucesso final
       toast({
-        title: "✅ Tudo criado com sucesso!",
-        description: `Campanha "${wizardData.campaign!.campaignName}" com ${wizardData.adSets.length} conjunto(s) e ${wizardData.creatives.length} criativo(s)`,
+        title: "🎉 Campanha completa criada!",
+        description: `${adSetIds.length} conjunto(s) e ${createdCount} criativo(s) criados`,
       });
 
-      router.push("/dashboard/campaigns");
+      // Aguardar 2 segundos para mostrar último toast
+      setTimeout(() => {
+        router.push("/dashboard/ads-manager");
+      }, 2000);
     } catch (error: any) {
+      console.error("Erro ao salvar campanha:", error);
       toast({
-        title: "Erro ao salvar",
+        title: "❌ Erro ao salvar",
         description: error.message,
         variant: "destructive",
       });
@@ -311,6 +391,27 @@ export default function CreateWizardPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Loading Overlay */}
+      {saving && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <Card className="w-96">
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+                </div>
+                <div className="text-center">
+                  <h3 className="font-semibold text-lg">Salvando campanha...</h3>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Isso pode levar alguns segundos. Não feche esta página.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );
