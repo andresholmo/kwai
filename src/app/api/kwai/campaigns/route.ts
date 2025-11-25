@@ -107,36 +107,7 @@ export async function POST(request: NextRequest) {
     }
 
     kwaiAPI.setAccessToken(tokenData.access_token);
-
-    let result;
-
-    try {
-      console.log("Trying with full campaign data...");
-      result = await kwaiAPI.createCampaign(accountId, campaignData);
-      console.log("SUCCESS!");
-    } catch (error: any) {
-      console.error(
-        "Failed with full data:",
-        error.response?.data?.errorMessage || error.message
-      );
-
-      // Se falhar, tentar versão simplificada
-      try {
-        console.log("Trying simplified version (marketingGoal: 2)...");
-        result = await kwaiAPI.createCampaignSimple(accountId, {
-          campaignName: campaignData.campaignName,
-          campaignBudgetType: campaignData.campaignBudgetType,
-          campaignBudget: campaignData.campaignBudget,
-        });
-        console.log("SUCCESS with simplified version!");
-      } catch (simpleError: any) {
-        console.error(
-          "Failed with simple version too:",
-          simpleError.response?.data?.errorMessage || simpleError.message
-        );
-        throw error; // Throw original error
-      }
-    }
+    const result = await kwaiAPI.createCampaign(accountId, campaignData);
 
     return NextResponse.json({
       success: true,
@@ -144,7 +115,7 @@ export async function POST(request: NextRequest) {
       campaign: result,
     });
   } catch (error: any) {
-    console.error("Erro final:", JSON.stringify(error.response?.data, null, 2));
+    console.error("Erro ao criar campanha:", error.response?.data?.message || error.message);
 
     return NextResponse.json(
       {
