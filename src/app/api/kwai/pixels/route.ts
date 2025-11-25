@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const accountId = searchParams.get("accountId");
+    const marketingType = searchParams.get("marketingType") || "2"; // 2 = Website
 
     if (!accountId) {
       return NextResponse.json({ error: "accountId required" }, { status: 400 });
@@ -37,25 +38,26 @@ export async function GET(request: NextRequest) {
     kwaiAPI.setAccessToken(tokenData.access_token);
 
     try {
-      const pixels = await kwaiAPI.getPixels(parseInt(accountId));
+      const conversions = await kwaiAPI.getConversions(
+        parseInt(accountId),
+        parseInt(marketingType)
+      );
       return NextResponse.json({
         success: true,
-        pixels: pixels?.data || [],
+        conversions: conversions?.data || [],
       });
-    } catch (error: any) {
-      // Se não conseguir buscar pixels, retornar lista vazia
-      // Não quebrar a aplicação
-      console.log("Pixels endpoint não disponível, retornando lista vazia");
+    } catch (error) {
+      console.log("Conversions endpoint not available");
       return NextResponse.json({
         success: true,
-        pixels: [],
+        conversions: [],
       });
     }
   } catch (error: any) {
-    console.error("Erro ao buscar pixels:", error);
+    console.error("Erro na API de conversões:", error);
     return NextResponse.json({
       success: true,
-      pixels: [],
+      conversions: [],
     });
   }
 }

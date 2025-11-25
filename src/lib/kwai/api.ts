@@ -734,7 +734,30 @@ class KwaiAPI {
   }
 
   /**
-   * Buscar pixels de conversão
+   * Buscar metas de conversão disponíveis
+   */
+  async getConversions(accountId: number, marketingType: number = 2) {
+    console.log("=== GET CONVERSIONS ===");
+    console.log("accountId:", accountId);
+    console.log("marketingType:", marketingType);
+
+    try {
+      // Endpoint para listar metas de conversão disponíveis
+      const response = await this.client.post("/rest/n/mapi/tool/dspConvertList", {
+        accountId,
+        marketingType, // 1 = App, 2 = Website
+      });
+
+      console.log("Conversions response:", response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error("Error fetching conversions:", error.message);
+      return { data: [], total: 0 };
+    }
+  }
+
+  /**
+   * Buscar pixels de conversão (deprecated - usar getConversions)
    */
   async getPixels(accountId: number) {
     try {

@@ -16,7 +16,7 @@ import { Plus, Trash2 } from "lucide-react";
 import { reaisToMicro } from "@/lib/utils";
 
 export function AdSetsStep({ data, onUpdate }: any) {
-  const [pixels, setPixels] = useState<any[]>([]);
+  const [conversions, setConversions] = useState<any[]>([]);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     unitName: "",
@@ -26,24 +26,37 @@ export function AdSetsStep({ data, onUpdate }: any) {
     bid: "",
     dayBudget: "",
     gender: 3,
-    pixelId: "",
+    conversionId: undefined as number | undefined,
   });
 
-  // Buscar pixels quando selecionar conta
-  useEffect(() => {
-    if (data.campaign?.accountId) {
-      fetch(`/api/kwai/pixels?accountId=${data.campaign.accountId}`)
-        .then((res) => res.json())
-        .then((dataRes) => {
-          if (dataRes.success) {
-            setPixels(dataRes.pixels || []);
-          }
-        })
-        .catch((error) => {
-          console.error("Erro ao buscar pixels:", error);
-        });
+  // Função para buscar conversões quando optimization mudar para 'conversions'
+  const fetchConversions = async () => {
+    if (!data.campaign?.accountId) return;
+
+    try {
+      const res = await fetch(
+        `/api/kwai/pixels?accountId=${data.campaign.accountId}&marketingType=2`
+      );
+      const dataRes = await res.json();
+
+      if (dataRes.success) {
+        setConversions(dataRes.conversions || []);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar conversões:", error);
+      setConversions([]);
     }
-  }, [data.campaign?.accountId]);
+  };
+
+  // Chamar quando ad set mudar optimization para conversions
+  useEffect(() => {
+    const hasConversionOptimization =
+      formData.optimizationGoal === 3 || data.adSets.some((adSet: any) => adSet.optimizationGoal === 3);
+    if (hasConversionOptimization && conversions.length === 0 && data.campaign?.accountId) {
+      fetchConversions();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.optimizationGoal, data.adSets, data.campaign?.accountId]);
 
   const handleAdd = () => {
     if (!formData.unitName || !formData.websiteUrl || !formData.bid) {
@@ -51,9 +64,9 @@ export function AdSetsStep({ data, onUpdate }: any) {
       return;
     }
 
-    // Validar pixel quando otimização é conversões
-    if (formData.optimizationGoal === 3 && !formData.pixelId) {
-      alert("Pixel de Conversão é obrigatório quando a otimização é Conversões");
+    // Validar conversão quando otimização é conversões
+    if (formData.optimizationGoal === 3 && !formData.conversionId) {
+      alert("Meta de Conversão é obrigatória quando a otimização é Conversões");
       return;
     }
 
@@ -61,7 +74,7 @@ export function AdSetsStep({ data, onUpdate }: any) {
       ...formData,
       bid: reaisToMicro(parseFloat(formData.bid)),
       dayBudget: formData.dayBudget ? reaisToMicro(parseFloat(formData.dayBudget)) : undefined,
-      pixelId: formData.pixelId ? parseInt(formData.pixelId) : undefined,
+      conversionId: formData.conversionId,
     };
 
     if (editingIndex !== null) {
@@ -82,7 +95,7 @@ export function AdSetsStep({ data, onUpdate }: any) {
       bid: "",
       dayBudget: "",
       gender: 3,
-      pixelId: "",
+      conversionId: undefined,
     });
   };
 
@@ -92,7 +105,7 @@ export function AdSetsStep({ data, onUpdate }: any) {
       ...adSet,
       bid: (adSet.bid / 1000000).toString(),
       dayBudget: adSet.dayBudget ? (adSet.dayBudget / 1000000).toString() : "",
-      pixelId: adSet.pixelId?.toString() || "",
+      conversionId: adSet.conversionId,
     });
     setEditingIndex(index);
   };
@@ -206,37 +219,40 @@ export function AdSetsStep({ data, onUpdate }: any) {
             </div>
           </div>
 
-          {/* Pixel de Conversão quando otimização = Conversões */}
+          {/* Meta de Conversão - só aparece se optimization for 'conversions' */}
           {formData.optimizationGoal === 3 && (
             <div className="space-y-2">
-              <Label>Pixel de Conversão *</Label>
-              <Select
-                value={formData.pixelId || "none"}
-                onValueChange={(v) =>
-                  setFormData({ ...formData, pixelId: v === "none" ? "" : v })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um pixel" />
-                </SelectTrigger>
-                <SelectContent>
-                  {pixels.length === 0 ? (
-                    <SelectItem value="loading" disabled>
-                      Carregando pixels...
-                    </SelectItem>
-                  ) : (
-                    pixels.map((pixel) => (
-                      <SelectItem key={pixel.pixelId} value={pixel.pixelId.toString()}>
-                        {pixel.pixelName || `Pixel ${pixel.pixelId}`}
+              <Label>Meta de Conversão *</Label>
+              {conversions.length > 0 ? (
+                <Select
+                  value={formData.conversionId?.toString() || undefined}
+                  onValueChange={(val) =>
+                    setFormData({ ...formData, conversionId: parseInt(val) })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma meta de conversão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {conversions.map((conv: any) => (
+                      <SelectItem
+                        key={conv.convertId || conv.id}
+                        value={(conv.convertId || conv.id)?.toString()}
+                      >
+                        {conv.convertName || conv.name}
                       </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-              {pixels.length === 0 && (
-                <p className="text-xs text-gray-500">
-                  Nenhum pixel encontrado. Configure pixels na conta do Kwai.
-                </p>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="p-3 border rounded-lg bg-amber-50 dark:bg-amber-950/20">
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    Nenhuma meta de conversão encontrada.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Configure metas de conversão no Kwai Ads Manager primeiro.
+                  </p>
+                </div>
               )}
             </div>
           )}
@@ -264,8 +280,8 @@ export function AdSetsStep({ data, onUpdate }: any) {
                       {(adSet.bid / 1000000).toFixed(2)} |
                       {adSet.dayBudget &&
                         ` Orçamento: R$ ${(adSet.dayBudget / 1000000).toFixed(2)}`}
-                      {adSet.optimizationGoal === 3 && adSet.pixelId && (
-                        <> | Pixel: {adSet.pixelId}</>
+                      {adSet.optimizationGoal === 3 && adSet.conversionId && (
+                        <> | Conversão: {adSet.conversionId}</>
                       )}
                     </p>
                   </div>
