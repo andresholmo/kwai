@@ -95,19 +95,51 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("=== CAMPAIGN CREATION REQUEST ===");
+    console.log("User ID:", user.id);
     console.log("Account ID:", accountId);
     console.log("Campaign Data:", JSON.stringify(campaignData, null, 2));
 
-    const { data: tokenData } = await (supabase.from("kwai_tokens") as any)
-      .select("access_token")
+    const { data: tokenData, error: tokenError } = await (supabase.from("kwai_tokens") as any)
+      .select("*")
       .eq("user_id", user.id)
       .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (!tokenData) {
-      return NextResponse.json({ error: "Token expired" }, { status: 401 });
+    if (tokenError || !tokenData) {
+      console.error("Token error:", tokenError);
+      return NextResponse.json(
+        { error: "Token not found or expired" },
+        { status: 401 }
+      );
+    }
+
+    console.log("Token found:");
+    console.log("- Expires at:", tokenData.expires_at);
+    console.log(
+      "- Access token (first 20):",
+      tokenData.access_token?.substring(0, 20) || "MISSING"
+    );
+    console.log("- Scope:", tokenData.scope);
+
+    // Verificar se token realmente não expirou
+    const expiresAt = new Date(tokenData.expires_at);
+    const now = new Date();
+    const minutesUntilExpiry =
+      (expiresAt.getTime() - now.getTime()) / 1000 / 60;
+
+    console.log("Token expiry check:");
+    console.log("- Now:", now.toISOString());
+    console.log("- Expires:", expiresAt.toISOString());
+    console.log("- Minutes until expiry:", minutesUntilExpiry.toFixed(2));
+
+    if (minutesUntilExpiry < 0) {
+      console.error("Token expired!");
+      return NextResponse.json(
+        { error: "Token expired, please reconnect" },
+        { status: 401 }
+      );
     }
 
     kwaiAPI.setAccessToken(tokenData.access_token);
@@ -121,10 +153,13 @@ export async function POST(request: NextRequest) {
       result = await kwaiAPI.createCampaign(accountId, campaignData);
       console.log("Main endpoint SUCCESS");
     } catch (error: any) {
-      console.log(
-        "Main endpoint FAILED:",
-        error.response?.data?.message || error.message
-      );
+      console.error("Main endpoint FAILED");
+      console.error("Error object keys:", Object.keys(error));
+      console.error("Error message:", error.message);
+      console.error("Error response:", error.response);
+      console.error("Error config:", error.config);
+      console.error("Error code:", error.code);
+
       lastError = error;
 
       // Tentar endpoint alternativo
@@ -133,11 +168,9 @@ export async function POST(request: NextRequest) {
         result = await kwaiAPI.createCampaignAlt(accountId, campaignData);
         console.log("Alternative endpoint SUCCESS");
       } catch (altError: any) {
-        console.log(
-          "Alternative endpoint FAILED:",
-          altError.response?.data?.message || altError.message
-        );
-        throw lastError; // Lançar o erro original
+        console.error("Alternative endpoint FAILED");
+        console.error("Alt error:", altError.message);
+        throw lastError;
       }
     }
 
@@ -148,9 +181,14 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error("=== FINAL ERROR ===");
+    console.error("Error type:", typeof error);
+    console.error("Error constructor:", error.constructor?.name);
+    console.error("Has response:", !!error.response);
     console.error("Status:", error.response?.status);
-    console.error("Message:", error.response?.data?.message || error.message);
-    console.error("Full error:", JSON.stringify(error.response?.data, null, 2));
+    console.error("Message:", error.message);
+    console.error("Response data:", error.response?.data);
+    console.error("Config URL:", error.config?.url);
+    console.error("Config data:", error.config?.data);
     console.error("===================");
 
     return NextResponse.json(
@@ -159,6 +197,7 @@ export async function POST(request: NextRequest) {
           error.response?.data?.message ||
           error.response?.data?.err_msg ||
           error.message,
+        details: error.response?.data,
       },
       { status: 500 }
     );

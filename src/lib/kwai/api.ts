@@ -22,38 +22,83 @@ class KwaiAPI {
 
   constructor() {
     this.client = axios.create({
-      baseURL: process.env.KWAI_API_BASE_URL,
+      baseURL: process.env.KWAI_API_BASE_URL || "https://developers.kwai.com",
       headers: {
         "Content-Type": "application/json",
       },
     });
 
-    // Interceptor para adicionar token
-    this.client.interceptors.request.use((config) => {
-      if (this.accessToken) {
-        config.headers["Access-Token"] = this.accessToken;
-      }
-      return config;
-    });
+    // Request interceptor
+    this.client.interceptors.request.use(
+      (config) => {
+        console.log("=== AXIOS REQUEST INTERCEPTOR ===");
+        console.log("URL:", config.url);
+        console.log("Method:", config.method);
+        console.log("Base URL:", config.baseURL);
+        console.log("Full URL:", `${config.baseURL}${config.url}`);
+        console.log("Headers:", JSON.stringify(config.headers, null, 2));
+        console.log("Data:", JSON.stringify(config.data, null, 2));
+        console.log("=================================");
 
-    // Interceptor para tratamento de erros
+        if (this.accessToken) {
+          config.headers["Access-Token"] = this.accessToken;
+          console.log("Access-Token added to headers");
+        } else {
+          console.warn("WARNING: No access token set!");
+        }
+
+        return config;
+      },
+      (error) => {
+        console.error("=== REQUEST INTERCEPTOR ERROR ===");
+        console.error("Error:", error);
+        console.error("=================================");
+        return Promise.reject(error);
+      }
+    );
+
+    // Response interceptor
     this.client.interceptors.response.use(
       (response) => {
+        console.log("=== AXIOS RESPONSE INTERCEPTOR ===");
+        console.log("Status:", response.status);
+        console.log("Status Text:", response.statusText);
+        console.log("Data:", JSON.stringify(response.data, null, 2));
+        console.log("==================================");
+
         // Kwai retorna status 200 com data.status diferente de 200 em caso de erro
         if (response.data?.status && response.data.status !== 200) {
+          console.error("API returned error in response.data.status:", response.data.status);
           return Promise.reject(response.data);
         }
         return response;
       },
-      async (error: AxiosError<any>) => {
+      (error: AxiosError<any>) => {
+        console.error("=== RESPONSE INTERCEPTOR ERROR ===");
+        console.error("Has response:", !!error.response);
+        console.error("Status:", error.response?.status);
+        console.error("Status Text:", error.response?.statusText);
+        console.error("Data:", JSON.stringify(error.response?.data, null, 2));
+        console.error("Message:", error.message);
+        console.error("Code:", error.code);
+        console.error("Config:", JSON.stringify(
+          {
+            url: error.config?.url,
+            method: error.config?.method,
+            baseURL: error.config?.baseURL,
+            data: error.config?.data,
+            headers: error.config?.headers,
+          },
+          null,
+          2
+        ));
+        console.error("===================================");
+
         const originalRequest = error.config as any;
 
         // Token expirado (401) - tentar refresh
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
-
-          // Aqui seria ideal buscar o refresh_token do banco
-          // Por enquanto, apenas rejeita
           console.error("Token expired - needs manual refresh");
         }
 
@@ -63,6 +108,10 @@ class KwaiAPI {
   }
 
   setAccessToken(token: string) {
+    console.log("=== SETTING ACCESS TOKEN ===");
+    console.log("Token (first 20 chars):", token.substring(0, 20));
+    console.log("Token length:", token.length);
+    console.log("============================");
     this.accessToken = token;
   }
 
