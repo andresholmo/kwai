@@ -62,16 +62,29 @@ export async function POST(request: NextRequest) {
             ? 2 // Se tem orçamento, usar diário
             : 1; // Sem orçamento = sem limite
 
-    const newCampaignData = {
+    const newCampaignData: any = {
       campaignName: `${originalCampaign.campaignName} (Cópia)`,
       marketingGoal: originalCampaign.marketingGoal,
       objective: originalCampaign.objective,
       campaignBudgetType: originalCampaign.campaignBudgetType,
       campaignBudget: originalCampaign.campaignBudget,
       budgetType: budgetType, // Campo obrigatório
+      adCategory: originalCampaign.adCategory || 1,
+      campaignType: originalCampaign.campaignType || 3,
+      // IMPORTANTE: Copiar estes campos da campanha original!
+      marketingType: originalCampaign.marketingType || 1,
+      deliveryStrategy: originalCampaign.deliveryStrategy || 3,
+      conversionType: originalCampaign.conversionType,
+      budgetOptimization: originalCampaign.budgetOptimization || 0,
     };
 
-    console.log("Duplicating campaign with budgetType:", budgetType);
+    console.log("Duplicating campaign:", {
+      originalBudgetType: originalCampaign.campaignBudgetType,
+      budgetType: budgetType,
+      budget: originalCampaign.campaignBudget,
+      marketingType: newCampaignData.marketingType,
+      deliveryStrategy: newCampaignData.deliveryStrategy,
+    });
 
     const result = await kwaiAPI.createCampaign(accountId, newCampaignData);
 

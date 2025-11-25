@@ -271,31 +271,14 @@ class KwaiAPI {
   /**
    * Criar campanha
    */
-  async createCampaign(
-    accountId: number,
-    campaignData: {
-      campaignName: string;
-      marketingGoal: number; // 1=Awareness, 2=Consideration, 3=Conversion
-      objective: number; // 1=App, 2=Website
-      campaignBudgetType?: number; // 1=Daily, 2=Lifetime
-      campaignBudget?: number; // em micro-reais
-      budgetType?: number; // 1=sem limite, 2=diário, 3=total
-    }
-  ) {
+  async createCampaign(accountId: number, campaignData: any) {
     const campaignObject: any = {
       campaignName: campaignData.campaignName,
       marketingGoal: campaignData.marketingGoal,
       objective: campaignData.objective,
-      adCategory: 1,
-      campaignType: 3,
+      adCategory: campaignData.adCategory || 1,
+      campaignType: campaignData.campaignType || 3,
     };
-
-    // Para campanhas de Conversão (marketingGoal: 3) + Website (objective: 2)
-    if (campaignData.marketingGoal === 3 && campaignData.objective === 2) {
-      campaignObject.conversionType = 1; // Landing Page Interaction
-      campaignObject.deliveryStrategy = 3;
-      campaignObject.marketingType = 1; // 1=Website Conversions
-    }
 
     // Orçamento - budgetType é obrigatório
     // 1=sem limite, 2=orçamento diário, 3=orçamento total
@@ -303,17 +286,38 @@ class KwaiAPI {
       campaignObject.budgetType = campaignData.budgetType;
     } else if (campaignData.campaignBudgetType) {
       // Mapear campaignBudgetType para budgetType
-      // campaignBudgetType: 1=Diário, 2=Vitalício
-      // budgetType: 1=sem limite, 2=diário, 3=total
       campaignObject.budgetType =
-        campaignData.campaignBudgetType === 1 ? 2 : 1; // Diário=2, Vitalício=1
+        campaignData.campaignBudgetType === 1 ? 2 : 1;
     } else {
-      // Default: sem limite
       campaignObject.budgetType = 1;
     }
 
     if (campaignData.campaignBudget) {
       campaignObject.budget = campaignData.campaignBudget;
+    }
+
+    // Campos opcionais que podem vir da duplicação
+    if (campaignData.marketingType !== undefined) {
+      campaignObject.marketingType = campaignData.marketingType;
+    } else if (campaignData.marketingGoal === 3 && campaignData.objective === 2) {
+      // Para campanhas de Conversão + Website
+      campaignObject.marketingType = 1; // 1=Website Conversions
+    }
+
+    if (campaignData.deliveryStrategy !== undefined) {
+      campaignObject.deliveryStrategy = campaignData.deliveryStrategy;
+    } else if (campaignData.marketingGoal === 3 && campaignData.objective === 2) {
+      campaignObject.deliveryStrategy = 3;
+    }
+
+    if (campaignData.conversionType !== undefined) {
+      campaignObject.conversionType = campaignData.conversionType;
+    } else if (campaignData.marketingGoal === 3 && campaignData.objective === 2) {
+      campaignObject.conversionType = 1; // Landing Page Interaction
+    }
+
+    if (campaignData.budgetOptimization !== undefined) {
+      campaignObject.budgetOptimization = campaignData.budgetOptimization;
     }
 
     const payload = {
@@ -641,27 +645,43 @@ class KwaiAPI {
   /**
    * Atualizar Ad Set
    */
-  async updateAdSet(
-    accountId: number,
-    unitId: number,
-    updates: {
-      unitName?: string;
-      bid?: number;
-      dayBudget?: number;
-      websiteUrl?: string;
-      openStatus?: number;
-    }
-  ) {
+  async updateAdSet(accountId: number, adSetData: any) {
+    // Converter openStatus se necessário
+    const openStatus =
+      adSetData.openStatus === 0 || adSetData.openStatus === false
+        ? 2
+        : adSetData.openStatus === 1 || adSetData.openStatus === true
+          ? 1
+          : adSetData.openStatus;
+
+    const updatePayload = {
+      accountId,
+      unitUpdateModelList: [
+        {
+          unitId: adSetData.unitId,
+          unitName: adSetData.unitName,
+          openStatus: openStatus,
+          ...(adSetData.dayBudget !== undefined && {
+            dayBudget: adSetData.dayBudget,
+          }),
+          ...(adSetData.bid !== undefined && { bid: adSetData.bid }),
+          ...(adSetData.websiteUrl !== undefined && {
+            websiteUrl: adSetData.websiteUrl,
+          }),
+        },
+      ],
+      adCategory: 1,
+    };
+
+    console.log("=== UPDATE AD SET ===");
+    console.log(JSON.stringify(updatePayload, null, 2));
+    console.log("====================");
+
     const response = await this.client.post(
       "/rest/n/mapi/unit/dspUnitUpdatePerformance",
-      {
-        accountId,
-        unitId,
-        adCategory: 1,
-        ...updates,
-      }
+      updatePayload
     );
-    return response.data.data;
+    return response.data;
   }
 
   /**

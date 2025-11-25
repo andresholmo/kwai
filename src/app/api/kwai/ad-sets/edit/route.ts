@@ -38,7 +38,10 @@ export async function POST(request: NextRequest) {
     kwaiAPI.setAccessToken(tokenData.access_token);
 
     // Atualizar Ad Set
-    const result = await kwaiAPI.updateAdSet(accountId, unitId, updates);
+    const result = await kwaiAPI.updateAdSet(accountId, {
+      unitId,
+      ...updates,
+    });
 
     return NextResponse.json({
       success: true,
