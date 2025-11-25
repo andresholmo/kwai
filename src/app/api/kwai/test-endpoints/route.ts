@@ -2,73 +2,105 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import axios from "axios";
 
-// Lista de endpoints possíveis para testar
+// Domínios para testar
+const DOMAINS = ["https://developers.kwai.com", "https://ad.e.kuaishou.com"];
+
+// Endpoints para testar em cada domínio
 const ENDPOINTS_TO_TEST = [
-  // Materiais - variações possíveis
-  { name: "material-query", path: "/rest/n/mapi/material/query", method: "post" },
-  { name: "material-list", path: "/rest/n/mapi/material/list", method: "post" },
+  // === MATERIAIS ===
+  // Formato OpenAPI (usado no SDK oficial)
   {
-    name: "material-video-list",
-    path: "/rest/n/mapi/material/video/list",
-    method: "post",
-  },
-  {
-    name: "material-image-list",
-    path: "/rest/n/mapi/material/image/list",
-    method: "post",
-  },
-  { name: "file-video-list", path: "/rest/n/mapi/file/video/list", method: "post" },
-  { name: "file-image-list", path: "/rest/n/mapi/file/image/list", method: "post" },
-  {
-    name: "creative-material",
-    path: "/rest/n/mapi/creative/material/list",
-    method: "post",
-  },
-  { name: "asset-list", path: "/rest/n/mapi/asset/list", method: "post" },
-  { name: "video-list", path: "/rest/n/mapi/video/list", method: "post" },
-
-  // Conversões/Pixels - variações possíveis
-  { name: "convert-list", path: "/rest/n/mapi/convert/list", method: "post" },
-  {
-    name: "conversion-list",
-    path: "/rest/n/mapi/conversion/list",
-    method: "post",
-  },
-  { name: "pixel-list", path: "/rest/n/mapi/pixel/list", method: "post" },
-  {
-    name: "tool-convert",
-    path: "/rest/n/mapi/tool/convert/list",
-    method: "post",
-  },
-  { name: "tool-pixel", path: "/rest/n/mapi/tool/pixel/list", method: "post" },
-  { name: "track-list", path: "/rest/n/mapi/track/list", method: "post" },
-  { name: "event-list", path: "/rest/n/mapi/event/list", method: "post" },
-
-  // DSP endpoints - variações
-  { name: "dsp-material", path: "/rest/n/mapi/dsp/material/list", method: "post" },
-  { name: "dsp-video", path: "/rest/n/mapi/dsp/video/list", method: "post" },
-  { name: "dsp-convert", path: "/rest/n/mapi/dsp/convert/list", method: "post" },
-
-  // OpenAPI style
-  {
-    name: "openapi-video",
+    name: "openapi-video-list",
     path: "/rest/openapi/v1/file/ad/video/list",
     method: "post",
+    bodyType: "advertiserId",
   },
   {
-    name: "openapi-image",
+    name: "openapi-image-list",
     path: "/rest/openapi/v1/file/ad/image/list",
     method: "post",
+    bodyType: "advertiserId",
   },
+  {
+    name: "openapi-video-get",
+    path: "/rest/openapi/v1/file/ad/video/get",
+    method: "post",
+    bodyType: "advertiserId",
+  },
+  {
+    name: "openapi-image-get",
+    path: "/rest/openapi/v1/file/ad/image/get",
+    method: "post",
+    bodyType: "advertiserId",
+  },
+
+  // Formato MAPI
+  {
+    name: "mapi-material",
+    path: "/rest/n/mapi/material/list",
+    method: "post",
+    bodyType: "accountId",
+  },
+  {
+    name: "mapi-video",
+    path: "/rest/n/mapi/file/video/list",
+    method: "post",
+    bodyType: "accountId",
+  },
+  {
+    name: "mapi-image",
+    path: "/rest/n/mapi/file/image/list",
+    method: "post",
+    bodyType: "accountId",
+  },
+
+  // === CONVERSÕES/PIXELS ===
   {
     name: "openapi-convert",
     path: "/rest/openapi/v1/tool/convert/list",
     method: "post",
+    bodyType: "advertiserId",
+  },
+  {
+    name: "openapi-pixel",
+    path: "/rest/openapi/v1/pixel/list",
+    method: "post",
+    bodyType: "advertiserId",
+  },
+  {
+    name: "mapi-convert",
+    path: "/rest/n/mapi/tool/convert/list",
+    method: "post",
+    bodyType: "accountId",
+  },
+  {
+    name: "mapi-pixel",
+    path: "/rest/n/mapi/pixel/list",
+    method: "post",
+    bodyType: "accountId",
   },
 
-  // Outros
-  { name: "ad-material", path: "/rest/n/mapi/ad/material/list", method: "post" },
-  { name: "creative-list", path: "/rest/n/mapi/creative/list", method: "post" },
+  // === OCPC (Conversões otimizadas) ===
+  {
+    name: "openapi-ocpc",
+    path: "/rest/openapi/v1/unit/ocpc/conversion/list",
+    method: "post",
+    bodyType: "advertiserId",
+  },
+  {
+    name: "mapi-ocpc",
+    path: "/rest/n/mapi/unit/ocpc/list",
+    method: "post",
+    bodyType: "accountId",
+  },
+
+  // === CRIATIVOS (para comparar - sabemos que funciona) ===
+  {
+    name: "mapi-creative",
+    path: "/rest/n/mapi/creative/dspCreativePageQueryPerformance",
+    method: "post",
+    bodyType: "accountId",
+  },
 ];
 
 export const dynamic = "force-dynamic";
@@ -105,68 +137,105 @@ export async function GET(request: NextRequest) {
 
     const results: any[] = [];
 
-    // Testar cada endpoint
-    for (const endpoint of ENDPOINTS_TO_TEST) {
-      try {
-        const response = await axios({
-          method: endpoint.method,
-          url: `https://developers.kwai.com${endpoint.path}`,
-          headers: {
-            "Content-Type": "application/json",
-            "Access-Token": tokenData.access_token,
-          },
-          data: {
-            accountId: parseInt(accountId),
-            pageNo: 1,
-            pageSize: 10,
-          },
-          timeout: 5000, // 5 segundos timeout
-        });
+    // Testar cada domínio
+    for (const domain of DOMAINS) {
+      console.log(`\n========== TESTANDO DOMÍNIO: ${domain} ==========\n`);
 
-        results.push({
-          name: endpoint.name,
-          path: endpoint.path,
-          status: response.status,
-          success: true,
-          data: response.data,
-        });
+      // Testar cada endpoint
+      for (const endpoint of ENDPOINTS_TO_TEST) {
+        const url = `${domain}${endpoint.path}`;
 
-        console.log(`✅ ENDPOINT FUNCIONA: ${endpoint.path}`);
-        console.log("Response:", JSON.stringify(response.data, null, 2));
-      } catch (error: any) {
-        const status = error.response?.status || "timeout";
-        results.push({
-          name: endpoint.name,
-          path: endpoint.path,
-          status: status,
-          success: false,
-          error: error.message,
-        });
+        // Montar body baseado no tipo
+        const body =
+          endpoint.bodyType === "advertiserId"
+            ? { advertiserId: parseInt(accountId), pageNo: 1, pageSize: 10 }
+            : { accountId: parseInt(accountId), pageNo: 1, pageSize: 10 };
 
-        // Só logar se não for 404 (404 é esperado para endpoints inexistentes)
-        if (status !== 404) {
-          console.log(`⚠️ ${endpoint.path}: ${status} - ${error.message}`);
+        try {
+          console.log(`Testando: ${url}`);
+
+          const response = await axios({
+            method: endpoint.method,
+            url: url,
+            headers: {
+              "Content-Type": "application/json",
+              "Access-Token": tokenData.access_token,
+            },
+            data: body,
+            timeout: 10000, // 10 segundos timeout
+          });
+
+          results.push({
+            domain,
+            name: endpoint.name,
+            path: endpoint.path,
+            url,
+            status: response.status,
+            success: true,
+            hasData: !!response.data?.data,
+            dataLength: response.data?.data?.length || 0,
+            responsePreview: JSON.stringify(response.data).substring(0, 200),
+          });
+
+          console.log(`✅ FUNCIONA: ${url}`);
+          console.log(`   Status: ${response.status}`);
+          console.log(
+            `   Data: ${JSON.stringify(response.data).substring(0, 100)}...`
+          );
+        } catch (error: any) {
+          const status = error.response?.status || "timeout";
+          const errorData = error.response?.data;
+
+          results.push({
+            domain,
+            name: endpoint.name,
+            path: endpoint.path,
+            url,
+            status: status,
+            success: false,
+            error: error.message,
+            errorData: errorData
+              ? JSON.stringify(errorData).substring(0, 200)
+              : null,
+          });
+
+          // Logar erros diferentes de 404
+          if (status !== 404) {
+            console.log(`⚠️ ERRO ${status}: ${url}`);
+            console.log(`   Mensagem: ${error.message}`);
+            if (errorData) {
+              console.log(
+                `   Response: ${JSON.stringify(errorData).substring(0, 100)}`
+              );
+            }
+          }
         }
       }
     }
 
-    // Separar endpoints que funcionam dos que não funcionam
-    const working = results.filter((r) => r.success);
-    const notFound = results.filter((r) => r.status === 404);
-    const otherErrors = results.filter((r) => !r.success && r.status !== 404);
+    // Separar resultados por domínio
+    const byDomain: any = {};
+    for (const domain of DOMAINS) {
+      const domainResults = results.filter((r) => r.domain === domain);
+      byDomain[domain] = {
+        working: domainResults.filter((r) => r.success),
+        errors: domainResults.filter((r) => !r.success && r.status !== 404),
+        notFound: domainResults.filter((r) => r.status === 404).length,
+      };
+    }
+
+    // Resumo geral
+    const allWorking = results.filter((r) => r.success);
 
     return NextResponse.json({
       success: true,
       summary: {
-        total: results.length,
-        working: working.length,
-        notFound: notFound.length,
-        otherErrors: otherErrors.length,
+        totalTests: results.length,
+        totalWorking: allWorking.length,
+        domains: DOMAINS,
       },
-      working,
-      otherErrors,
-      // Não retornar todos os 404 para não poluir
-      notFoundCount: notFound.length,
+      byDomain,
+      allWorking,
     });
   } catch (error: any) {
     console.error("Erro ao testar endpoints:", error);
@@ -179,4 +248,3 @@ export async function GET(request: NextRequest) {
     );
   }
 }
-
