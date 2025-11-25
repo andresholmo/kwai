@@ -272,28 +272,39 @@ class KwaiAPI {
    * Criar campanha
    */
   async createCampaign(accountId: number, campaignData: any) {
+    // Se deliveryStrategy é 3 (LC/Lowest Cost), budgetType DEVE ser 1 (sem limite)
+    let budgetType = campaignData.budgetType || 1;
+    let budget = campaignData.campaignBudget || campaignData.budget;
+
+    if (campaignData.deliveryStrategy === 3) {
+      console.log(
+        "=== LC Strategy detected, forcing budgetType to 1 (no limit) ==="
+      );
+      budgetType = 1;
+      budget = undefined; // Não enviar budget
+    } else {
+      // Orçamento - budgetType é obrigatório
+      // 1=sem limite, 2=orçamento diário, 3=orçamento total
+      if (campaignData.budgetType) {
+        budgetType = campaignData.budgetType;
+      } else if (campaignData.campaignBudgetType) {
+        // Mapear campaignBudgetType para budgetType
+        budgetType = campaignData.campaignBudgetType === 1 ? 2 : 1;
+      }
+    }
+
     const campaignObject: any = {
       campaignName: campaignData.campaignName,
       marketingGoal: campaignData.marketingGoal,
       objective: campaignData.objective,
       adCategory: campaignData.adCategory || 1,
       campaignType: campaignData.campaignType || 3,
+      budgetType: budgetType,
     };
 
-    // Orçamento - budgetType é obrigatório
-    // 1=sem limite, 2=orçamento diário, 3=orçamento total
-    if (campaignData.budgetType) {
-      campaignObject.budgetType = campaignData.budgetType;
-    } else if (campaignData.campaignBudgetType) {
-      // Mapear campaignBudgetType para budgetType
-      campaignObject.budgetType =
-        campaignData.campaignBudgetType === 1 ? 2 : 1;
-    } else {
-      campaignObject.budgetType = 1;
-    }
-
-    if (campaignData.campaignBudget) {
-      campaignObject.budget = campaignData.campaignBudget;
+    // Só incluir budget se budgetType != 1 E tiver valor
+    if (budgetType !== 1 && budget && budget > 0) {
+      campaignObject.budget = budget;
     }
 
     // Campos opcionais que podem vir da duplicação
@@ -324,9 +335,9 @@ class KwaiAPI {
       campaignAddModelList: [campaignObject],
     };
 
-    console.log("=== CREATE CAMPAIGN (deliveryStrategy: 3) ===");
+    console.log("=== CREATE CAMPAIGN (final payload) ===");
     console.log(JSON.stringify(payload, null, 2));
-    console.log("=============================================");
+    console.log("=======================================");
 
     const response = await this.client.post(
       "/rest/n/mapi/campaign/dspCampaignAddPerformance",
