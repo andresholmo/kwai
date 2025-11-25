@@ -272,83 +272,67 @@ class KwaiAPI {
    * Criar campanha
    */
   async createCampaign(accountId: number, campaignData: any) {
-    // Se deliveryStrategy é 3 (LC/Lowest Cost), budgetType DEVE ser 1 (sem limite)
-    let budgetType = campaignData.budgetType || 1;
-    let budget = campaignData.campaignBudget || campaignData.budget;
+    console.log("=== CREATE CAMPAIGN INPUT ===");
+    console.log("campaignData:", JSON.stringify(campaignData, null, 2));
 
-    if (campaignData.deliveryStrategy === 3) {
+    // REGRA CRÍTICA: Se deliveryStrategy = 3 (LC/Lowest Cost)
+    // budgetType DEVE ser 1 e NÃO pode ter budget
+    const isLCStrategy = campaignData.deliveryStrategy === 3;
+
+    if (isLCStrategy) {
       console.log(
-        "=== LC Strategy detected, forcing budgetType to 1 (no limit) ==="
+        "⚠️ LC STRATEGY DETECTED - Forcing budgetType=1, removing budget"
       );
-      budgetType = 1;
-      budget = undefined; // Não enviar budget
-    } else {
-      // Orçamento - budgetType é obrigatório
-      // 1=sem limite, 2=orçamento diário, 3=orçamento total
-      if (campaignData.budgetType) {
-        budgetType = campaignData.budgetType;
-      } else if (campaignData.campaignBudgetType) {
-        // Mapear campaignBudgetType para budgetType
-        budgetType = campaignData.campaignBudgetType === 1 ? 2 : 1;
-      }
     }
 
+    // Determinar budgetType
+    const budgetType = isLCStrategy
+      ? 1
+      : campaignData.budgetType || campaignData.campaignBudgetType || 1;
+
+    // Construir objeto da campanha
     const campaignObject: any = {
       campaignName: campaignData.campaignName,
-      marketingGoal: campaignData.marketingGoal,
-      objective: campaignData.objective,
+      marketingGoal: campaignData.marketingGoal || 3,
+      objective: campaignData.objective || 2,
       adCategory: campaignData.adCategory || 1,
       campaignType: campaignData.campaignType || 3,
       budgetType: budgetType,
+      marketingType: campaignData.marketingType || 1,
+      deliveryStrategy: campaignData.deliveryStrategy || 3,
+      conversionType: campaignData.conversionType || 1,
+      budgetOptimization: 0, // Sempre 0 na criação
     };
 
-    // Só incluir budget se budgetType != 1 E tiver valor
-    if (budgetType !== 1 && budget && budget > 0) {
-      campaignObject.budget = budget;
+    // IMPORTANTE: Só adicionar budget se NÃO for LC strategy E budgetType != 1
+    if (!isLCStrategy && budgetType !== 1) {
+      const budgetValue =
+        campaignData.budget ||
+        campaignData.campaignBudget ||
+        campaignData.dayBudget;
+      if (budgetValue && budgetValue > 0) {
+        campaignObject.budget = budgetValue;
+        console.log("Adding budget:", budgetValue);
+      }
+    } else {
+      console.log("NOT adding budget (LC strategy or budgetType=1)");
     }
-
-    // Campos opcionais que podem vir da duplicação
-    if (campaignData.marketingType !== undefined) {
-      campaignObject.marketingType = campaignData.marketingType;
-    } else if (campaignData.marketingGoal === 3 && campaignData.objective === 2) {
-      // Para campanhas de Conversão + Website
-      campaignObject.marketingType = 1; // 1=Website Conversions
-    }
-
-    if (campaignData.deliveryStrategy !== undefined) {
-      campaignObject.deliveryStrategy = campaignData.deliveryStrategy;
-    } else if (campaignData.marketingGoal === 3 && campaignData.objective === 2) {
-      campaignObject.deliveryStrategy = 3;
-    }
-
-    if (campaignData.conversionType !== undefined) {
-      campaignObject.conversionType = campaignData.conversionType;
-    } else if (campaignData.marketingGoal === 3 && campaignData.objective === 2) {
-      campaignObject.conversionType = 1; // Landing Page Interaction
-    }
-
-    // IMPORTANTE: budgetOptimization SEMPRE deve ser 0 na criação!
-    campaignObject.budgetOptimization = 0;
 
     const payload = {
       accountId,
       campaignAddModelList: [campaignObject],
     };
 
-    console.log("=== CREATE CAMPAIGN (final payload) ===");
+    console.log("=== FINAL CAMPAIGN PAYLOAD ===");
     console.log(JSON.stringify(payload, null, 2));
-    console.log("=======================================");
+    console.log("==============================");
 
     const response = await this.client.post(
       "/rest/n/mapi/campaign/dspCampaignAddPerformance",
       payload
     );
 
-    console.log("=== SUCCESS ===");
-    console.log(JSON.stringify(response.data, null, 2));
-    console.log("===============");
-
-    return response.data.data;
+    return response.data;
   }
 
   /**

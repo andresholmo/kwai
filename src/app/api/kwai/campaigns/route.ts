@@ -106,6 +106,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Token expired" }, { status: 401 });
     }
 
+    // Garantir que LC strategy não tem budget
+    if (campaignData.deliveryStrategy === 3) {
+      console.log("API Route: LC strategy - removing budget fields");
+      campaignData.budgetType = 1;
+      delete campaignData.budget;
+      delete campaignData.campaignBudget;
+      delete campaignData.dayBudget;
+    }
+
     kwaiAPI.setAccessToken(tokenData.access_token);
     const result = await kwaiAPI.createCampaign(accountId, campaignData);
 

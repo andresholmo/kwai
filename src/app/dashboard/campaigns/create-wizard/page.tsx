@@ -103,50 +103,66 @@ export default function CreateWizardPage() {
       });
 
       // Verificar se algum ad set usa LC strategy (bidType === 10)
-      // Se sim, campanha deve ter budgetType=1 (sem limite)
+      // Se sim, campanha deve ter budgetType=1 (sem limite) e deliveryStrategy=3
       const hasLCStrategy = wizardData.adSets.some(
         (adSet) => adSet.bidType === 10
       );
 
-      // Se bidType é CPC (10), campanha deve ser sem limite de orçamento
+      // Se bidType é oCPM (10), campanha deve ser sem limite de orçamento
       // O orçamento fica no nível do Ad Set, não da campanha
       const campaignBudgetType = hasLCStrategy
         ? 1
         : wizardData.campaign!.campaignBudgetType || 1;
+
+      // Construir campaignData
+      const campaignData: any = {
+        campaignName: wizardData.campaign!.campaignName,
+        marketingGoal: wizardData.campaign!.marketingGoal,
+        objective: wizardData.campaign!.objective,
+        campaignBudgetType: campaignBudgetType,
+        // IMPORTANTE: Se LC strategy, definir deliveryStrategy=3 e remover budget
+        ...(hasLCStrategy
+          ? {
+              deliveryStrategy: 3,
+              budgetType: 1,
+              campaignBudget: undefined,
+              budget: undefined,
+            }
+          : {
+              budgetType: campaignBudgetType,
+              campaignBudget: wizardData.campaign!.campaignBudget,
+            }),
+      };
+
+      console.log("=== WIZARD: Creating campaign ===");
+      console.log("hasLCStrategy:", hasLCStrategy);
+      console.log("campaignData:", JSON.stringify(campaignData, null, 2));
 
       const campaignRes = await fetch("/api/kwai/campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           accountId: parseInt(wizardData.campaign!.accountId),
-          campaignData: {
-            campaignName: wizardData.campaign!.campaignName,
-            marketingGoal: wizardData.campaign!.marketingGoal,
-            objective: wizardData.campaign!.objective,
-            campaignBudgetType: campaignBudgetType,
-            campaignBudget: hasLCStrategy
-              ? undefined
-              : wizardData.campaign!.campaignBudget,
-          },
+          campaignData,
         }),
       });
 
-      const campaignData = await campaignRes.json();
+      const campaignResponse = await campaignRes.json();
 
-      if (!campaignData.success) {
-        throw new Error(campaignData.error || "Erro ao criar campanha");
+      if (!campaignResponse.success) {
+        throw new Error(campaignResponse.error || "Erro ao criar campanha");
       }
 
       // Extrair campaignId
       const campaignId =
-        campaignData.campaignId ||
-        campaignData.campaign?.campaignId ||
-        campaignData.campaign?.[0]?.campaignId ||
-        campaignData.campaign?.data?.campaignId ||
-        campaignData.campaign?.data?.[0]?.campaignId;
+        campaignResponse.campaignId ||
+        campaignResponse.campaign?.campaignId ||
+        campaignResponse.campaign?.[0]?.campaignId ||
+        campaignResponse.campaign?.data?.campaignId ||
+        campaignResponse.campaign?.data?.[0]?.campaignId;
 
       if (!campaignId) {
-        console.error("Campaign response:", campaignData);
+        console.error("Campaign response:", campaignResponse);
         throw new Error("CampaignId não encontrado na resposta da API");
       }
 
