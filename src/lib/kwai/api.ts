@@ -64,13 +64,33 @@ class KwaiAPI {
         console.log("Status:", response.status);
         console.log("Status Text:", response.statusText);
         console.log("Data:", JSON.stringify(response.data, null, 2));
-        console.log("==================================");
 
-        // Kwai retorna status 200 com data.status diferente de 200 em caso de erro
+        // IMPORTANTE: Kwai retorna HTTP 200 mas com erro embutido no data.status
         if (response.data?.status && response.data.status !== 200) {
-          console.error("API returned error in response.data.status:", response.data.status);
-          return Promise.reject(response.data);
+          console.error(
+            "API returned error in response.data.status:",
+            response.data.status
+          );
+          console.log("==================================");
+
+          // Criar erro com a mesma estrutura que axios usaria
+          const error: any = new Error(
+            response.data.message || "API Error"
+          );
+          error.response = {
+            status: response.data.status,
+            data: response.data,
+            statusText: response.data.message,
+            headers: response.headers,
+            config: response.config,
+          };
+          error.config = response.config;
+          error.request = response.request;
+
+          return Promise.reject(error);
         }
+
+        console.log("==================================");
         return response;
       },
       (error: AxiosError<any>) => {
@@ -261,14 +281,15 @@ class KwaiAPI {
       campaignBudget?: number; // em micro-reais
     }
   ) {
+    // Testar com adCategory DENTRO do objeto da campanha
     const payload = {
       accountId,
-      adCategory: 1,
       campaignAddModelList: [
         {
           campaignName: campaignData.campaignName,
           marketingGoal: campaignData.marketingGoal,
           objective: campaignData.objective,
+          adCategory: 1, // <<<< MOVER PARA DENTRO
           ...(campaignData.campaignBudgetType && {
             campaignBudgetType: campaignData.campaignBudgetType,
           }),
@@ -279,10 +300,10 @@ class KwaiAPI {
       ],
     };
 
-    console.log("=== KWAI API CREATE CAMPAIGN ===");
+    console.log("=== KWAI API CREATE CAMPAIGN (v2) ===");
     console.log("Endpoint:", "/rest/n/mapi/campaign/dspCampaignAddPerformance");
     console.log("Payload:", JSON.stringify(payload, null, 2));
-    console.log("=================================");
+    console.log("=====================================");
 
     const response = await this.client.post(
       "/rest/n/mapi/campaign/dspCampaignAddPerformance",
@@ -654,6 +675,13 @@ class KwaiAPI {
       }
     );
     return response.data.data;
+  }
+
+  /**
+   * Método auxiliar para fazer chamadas diretas (para testes)
+   */
+  async post(endpoint: string, data: any) {
+    return await this.client.post(endpoint, data);
   }
 }
 

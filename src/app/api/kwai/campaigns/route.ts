@@ -147,30 +147,110 @@ export async function POST(request: NextRequest) {
     let result;
     let lastError;
 
-    // Tentar endpoint principal
+    // Variação 1: adCategory no root
     try {
-      console.log("Trying main endpoint...");
-      result = await kwaiAPI.createCampaign(accountId, campaignData);
-      console.log("Main endpoint SUCCESS");
-    } catch (error: any) {
-      console.error("Main endpoint FAILED");
-      console.error("Error object keys:", Object.keys(error));
-      console.error("Error message:", error.message);
-      console.error("Error response:", error.response);
-      console.error("Error config:", error.config);
-      console.error("Error code:", error.code);
+      console.log("Trying: adCategory at root level...");
+      const payload1 = {
+        accountId,
+        adCategory: 1,
+        campaignAddModelList: [
+          {
+            campaignName: campaignData.campaignName,
+            marketingGoal: campaignData.marketingGoal,
+            objective: campaignData.objective,
+            ...(campaignData.campaignBudgetType && {
+              campaignBudgetType: campaignData.campaignBudgetType,
+            }),
+            ...(campaignData.campaignBudget && {
+              campaignBudget: campaignData.campaignBudget,
+            }),
+          },
+        ],
+      };
+      console.log("Payload:", JSON.stringify(payload1, null, 2));
 
+      const res1 = await kwaiAPI.post(
+        "/rest/n/mapi/campaign/dspCampaignAddPerformance",
+        payload1
+      );
+      result = res1.data.data;
+      console.log("SUCCESS with adCategory at root!");
+    } catch (error: any) {
+      console.log(
+        "FAILED with adCategory at root:",
+        error.response?.data?.message || error.message
+      );
       lastError = error;
 
-      // Tentar endpoint alternativo
+      // Variação 2: adCategory dentro do objeto
       try {
-        console.log("Trying alternative endpoint...");
-        result = await kwaiAPI.createCampaignAlt(accountId, campaignData);
-        console.log("Alternative endpoint SUCCESS");
-      } catch (altError: any) {
-        console.error("Alternative endpoint FAILED");
-        console.error("Alt error:", altError.message);
-        throw lastError;
+        console.log("Trying: adCategory inside campaign object...");
+        const payload2 = {
+          accountId,
+          campaignAddModelList: [
+            {
+              campaignName: campaignData.campaignName,
+              marketingGoal: campaignData.marketingGoal,
+              objective: campaignData.objective,
+              adCategory: 1, // DENTRO
+              ...(campaignData.campaignBudgetType && {
+                campaignBudgetType: campaignData.campaignBudgetType,
+              }),
+              ...(campaignData.campaignBudget && {
+                campaignBudget: campaignData.campaignBudget,
+              }),
+            },
+          ],
+        };
+        console.log("Payload:", JSON.stringify(payload2, null, 2));
+
+        const res2 = await kwaiAPI.post(
+          "/rest/n/mapi/campaign/dspCampaignAddPerformance",
+          payload2
+        );
+        result = res2.data.data;
+        console.log("SUCCESS with adCategory inside!");
+      } catch (error2: any) {
+        console.log(
+          "FAILED with adCategory inside:",
+          error2.response?.data?.message || error2.message
+        );
+
+        // Variação 3: SEM adCategory
+        try {
+          console.log("Trying: WITHOUT adCategory...");
+          const payload3 = {
+            accountId,
+            campaignAddModelList: [
+              {
+                campaignName: campaignData.campaignName,
+                marketingGoal: campaignData.marketingGoal,
+                objective: campaignData.objective,
+                // SEM adCategory
+                ...(campaignData.campaignBudgetType && {
+                  campaignBudgetType: campaignData.campaignBudgetType,
+                }),
+                ...(campaignData.campaignBudget && {
+                  campaignBudget: campaignData.campaignBudget,
+                }),
+              },
+            ],
+          };
+          console.log("Payload:", JSON.stringify(payload3, null, 2));
+
+          const res3 = await kwaiAPI.post(
+            "/rest/n/mapi/campaign/dspCampaignAddPerformance",
+            payload3
+          );
+          result = res3.data.data;
+          console.log("SUCCESS without adCategory!");
+        } catch (error3: any) {
+          console.log(
+            "FAILED without adCategory:",
+            error3.response?.data?.message || error3.message
+          );
+          throw lastError; // Jogar o erro original
+        }
       }
     }
 
