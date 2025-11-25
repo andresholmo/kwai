@@ -40,7 +40,8 @@ type WizardData = {
     description: string;
     actionUrl: string;
     actionType: number;
-    materialId?: number;
+    photoId?: number; // photoId do material
+    materialId?: number; // Deprecated - usar photoId
   }>;
 };
 
@@ -247,7 +248,8 @@ export default function CreateWizardPage() {
                 description: creative.description || undefined,
                 actionUrl: creative.actionUrl,
                 actionType: creative.actionType,
-                ...(creative.materialId && { materialId: creative.materialId }),
+                ...(creative.photoId && { photoId: creative.photoId }),
+                ...(creative.materialId && { materialId: creative.materialId }), // Fallback
               },
             }),
           });

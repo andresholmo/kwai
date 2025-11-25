@@ -610,18 +610,35 @@ class KwaiAPI {
     creativeData: {
       unitId: number;
       creativeName: string;
-      materialId: number;
+      materialId?: number; // Deprecated - usar photoId
+      photoId?: number; // Novo campo - photoId do material
       actionType: number; // 1=Learn More, 2=Download, etc
       actionUrl: string; // URL de destino
       description?: string;
     }
   ) {
+    const creativePayload: any = {
+      unitId: creativeData.unitId,
+      creativeName: creativeData.creativeName,
+      actionType: creativeData.actionType,
+      actionUrl: creativeData.actionUrl,
+      ...(creativeData.description && { description: creativeData.description }),
+    };
+
+    // Adicionar photoId se selecionado (preferido)
+    if (creativeData.photoId) {
+      creativePayload.photoId = creativeData.photoId;
+    } else if (creativeData.materialId) {
+      // Fallback para materialId (compatibilidade)
+      creativePayload.materialId = creativeData.materialId;
+    }
+
     const response = await this.client.post(
       "/rest/n/mapi/creative/dspCreativeAddPerformance",
       {
         accountId,
         adCategory: 1,
-        ...creativeData,
+        ...creativePayload,
       }
     );
     return response.data.data;

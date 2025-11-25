@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,9 +13,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Trash2, Upload } from "lucide-react";
+import { Plus, Trash2, Upload, Video, Image, Loader2 } from "lucide-react";
 
 export function CreativesStep({ data, onUpdate }: any) {
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [loadingMaterials, setLoadingMaterials] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     adSetIndex: 0,
@@ -23,7 +25,37 @@ export function CreativesStep({ data, onUpdate }: any) {
     description: "",
     actionUrl: "",
     actionType: 1,
+    photoId: undefined as number | undefined,
   });
+
+  const accountId = data.campaign?.accountId;
+
+  const fetchMaterials = async () => {
+    if (!accountId) return;
+
+    setLoadingMaterials(true);
+    try {
+      const res = await fetch(
+        `/api/kwai/materials-from-creatives?accountId=${accountId}`
+      );
+      const dataRes = await res.json();
+
+      if (dataRes.success) {
+        setMaterials(dataRes.materials || []);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar materiais:", error);
+    } finally {
+      setLoadingMaterials(false);
+    }
+  };
+
+  useEffect(() => {
+    if (accountId) {
+      fetchMaterials();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountId]);
 
   const handleAdd = () => {
     if (!formData.creativeName || !formData.actionUrl) {
@@ -51,6 +83,7 @@ export function CreativesStep({ data, onUpdate }: any) {
       description: "",
       actionUrl: "",
       actionType: 1,
+      photoId: undefined,
     });
   };
 
@@ -58,6 +91,7 @@ export function CreativesStep({ data, onUpdate }: any) {
     const creative = data.creatives[index];
     setFormData({
       ...creative,
+      photoId: creative.photoId,
     });
     setEditingIndex(index);
   };
@@ -141,18 +175,65 @@ export function CreativesStep({ data, onUpdate }: any) {
               </Select>
             </div>
 
-            {/* Material - Não disponível via API */}
+            {/* Material - Biblioteca extraída dos criativos */}
             <div className="space-y-2">
               <Label>Material (Vídeo/Imagem)</Label>
-              <div className="p-4 border rounded-lg bg-muted/50 text-center">
-                <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  Upload de materiais não disponível via API
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Adicione o vídeo/imagem diretamente no Kwai Ads Manager após criar o anúncio.
-                </p>
-              </div>
+
+              {loadingMaterials ? (
+                <div className="p-4 border rounded-lg text-center">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">Carregando biblioteca...</p>
+                </div>
+              ) : materials.length > 0 ? (
+                <div className="space-y-2">
+                  <Select
+                    value={formData.photoId?.toString() || undefined}
+                    onValueChange={(val) =>
+                      setFormData({
+                        ...formData,
+                        photoId: val ? parseInt(val) : undefined,
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um material da biblioteca" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {materials.map((material) => (
+                        <SelectItem
+                          key={material.photoId}
+                          value={material.photoId.toString()}
+                        >
+                          <div className="flex items-center gap-2">
+                            {material.materialType === 1 ? (
+                              <Video className="h-4 w-4" />
+                            ) : (
+                              <Image className="h-4 w-4" />
+                            )}
+                            <span>{material.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              (usado {material.usedInCreatives}x)
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {materials.length} materiais encontrados na sua biblioteca
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 border rounded-lg bg-amber-50 dark:bg-amber-950/20 text-center">
+                  <Upload className="h-8 w-8 mx-auto text-amber-600 mb-2" />
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    Nenhum material encontrado na biblioteca
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Faça upload de materiais no Kwai Ads Manager primeiro
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
