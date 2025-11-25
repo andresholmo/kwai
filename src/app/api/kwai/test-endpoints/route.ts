@@ -2,104 +2,111 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import axios from "axios";
 
-// Domínios para testar
-const DOMAINS = ["https://developers.kwai.com", "https://ad.e.kuaishou.com"];
+// Testar apenas no domínio do Kwai Brasil com formatos OpenAPI
+const DOMAIN = "https://developers.kwai.com";
 
-// Endpoints para testar em cada domínio
 const ENDPOINTS_TO_TEST = [
-  // === MATERIAIS ===
-  // Formato OpenAPI (usado no SDK oficial)
+  // Formato OpenAPI - mesmo path do domínio chinês
   {
     name: "openapi-video-list",
     path: "/rest/openapi/v1/file/ad/video/list",
-    method: "post",
     bodyType: "advertiserId",
   },
   {
     name: "openapi-image-list",
     path: "/rest/openapi/v1/file/ad/image/list",
-    method: "post",
     bodyType: "advertiserId",
   },
   {
     name: "openapi-video-get",
     path: "/rest/openapi/v1/file/ad/video/get",
-    method: "post",
     bodyType: "advertiserId",
   },
   {
     name: "openapi-image-get",
     path: "/rest/openapi/v1/file/ad/image/get",
-    method: "post",
     bodyType: "advertiserId",
   },
-
-  // Formato MAPI
-  {
-    name: "mapi-material",
-    path: "/rest/n/mapi/material/list",
-    method: "post",
-    bodyType: "accountId",
-  },
-  {
-    name: "mapi-video",
-    path: "/rest/n/mapi/file/video/list",
-    method: "post",
-    bodyType: "accountId",
-  },
-  {
-    name: "mapi-image",
-    path: "/rest/n/mapi/file/image/list",
-    method: "post",
-    bodyType: "accountId",
-  },
-
-  // === CONVERSÕES/PIXELS ===
   {
     name: "openapi-convert",
     path: "/rest/openapi/v1/tool/convert/list",
-    method: "post",
     bodyType: "advertiserId",
   },
   {
     name: "openapi-pixel",
     path: "/rest/openapi/v1/pixel/list",
-    method: "post",
+    bodyType: "advertiserId",
+  },
+
+  // Variações com accountId ao invés de advertiserId
+  {
+    name: "openapi-video-list-acc",
+    path: "/rest/openapi/v1/file/ad/video/list",
+    bodyType: "accountId",
+  },
+  {
+    name: "openapi-image-list-acc",
+    path: "/rest/openapi/v1/file/ad/image/list",
+    bodyType: "accountId",
+  },
+  {
+    name: "openapi-convert-acc",
+    path: "/rest/openapi/v1/tool/convert/list",
+    bodyType: "accountId",
+  },
+
+  // Tentar com /gw/ prefix (alguns APIs usam gateway)
+  {
+    name: "gw-video-list",
+    path: "/gw/rest/openapi/v1/file/ad/video/list",
     bodyType: "advertiserId",
   },
   {
-    name: "mapi-convert",
+    name: "gw-image-list",
+    path: "/gw/rest/openapi/v1/file/ad/image/list",
+    bodyType: "advertiserId",
+  },
+  {
+    name: "gw-convert",
+    path: "/gw/rest/openapi/v1/tool/convert/list",
+    bodyType: "advertiserId",
+  },
+
+  // Tentar com /api/ prefix
+  {
+    name: "api-video-list",
+    path: "/api/rest/openapi/v1/file/ad/video/list",
+    bodyType: "advertiserId",
+  },
+  {
+    name: "api-image-list",
+    path: "/api/rest/openapi/v1/file/ad/image/list",
+    bodyType: "advertiserId",
+  },
+
+  // MAPI com estrutura OpenAPI
+  {
+    name: "mapi-openapi-video",
+    path: "/rest/n/mapi/file/ad/video/list",
+    bodyType: "accountId",
+  },
+  {
+    name: "mapi-openapi-image",
+    path: "/rest/n/mapi/file/ad/image/list",
+    bodyType: "accountId",
+  },
+  {
+    name: "mapi-openapi-convert",
     path: "/rest/n/mapi/tool/convert/list",
-    method: "post",
-    bodyType: "accountId",
-  },
-  {
-    name: "mapi-pixel",
-    path: "/rest/n/mapi/pixel/list",
-    method: "post",
     bodyType: "accountId",
   },
 
-  // === OCPC (Conversões otimizadas) ===
+  // Tentar buscar via creative (já sabemos que funciona)
   {
-    name: "openapi-ocpc",
-    path: "/rest/openapi/v1/unit/ocpc/conversion/list",
-    method: "post",
-    bodyType: "advertiserId",
-  },
-  {
-    name: "mapi-ocpc",
-    path: "/rest/n/mapi/unit/ocpc/list",
-    method: "post",
-    bodyType: "accountId",
-  },
-
-  // === CRIATIVOS (para comparar - sabemos que funciona) ===
-  {
-    name: "mapi-creative",
+    name: "creative-with-material",
     path: "/rest/n/mapi/creative/dspCreativePageQueryPerformance",
-    method: "post",
     bodyType: "accountId",
+    extra: { adCategory: 1 },
   },
 ];
 
@@ -137,108 +144,91 @@ export async function GET(request: NextRequest) {
 
     const results: any[] = [];
 
-    // Testar cada domínio
-    for (const domain of DOMAINS) {
-      console.log(`\n========== TESTANDO DOMÍNIO: ${domain} ==========\n`);
+    for (const endpoint of ENDPOINTS_TO_TEST) {
+      const url = `${DOMAIN}${endpoint.path}`;
 
-      // Testar cada endpoint
-      for (const endpoint of ENDPOINTS_TO_TEST) {
-        const url = `${domain}${endpoint.path}`;
+      // Montar body
+      let body: any = { pageNo: 1, pageSize: 10 };
+      if (endpoint.bodyType === "advertiserId") {
+        body.advertiserId = parseInt(accountId);
+      } else {
+        body.accountId = parseInt(accountId);
+      }
+      if (endpoint.extra) {
+        body = { ...body, ...endpoint.extra };
+      }
 
-        // Montar body baseado no tipo
-        const body =
-          endpoint.bodyType === "advertiserId"
-            ? { advertiserId: parseInt(accountId), pageNo: 1, pageSize: 10 }
-            : { accountId: parseInt(accountId), pageNo: 1, pageSize: 10 };
+      try {
+        console.log(`Testando: ${url}`);
+        console.log(`Body: ${JSON.stringify(body)}`);
 
-        try {
-          console.log(`Testando: ${url}`);
+        const response = await axios({
+          method: "post",
+          url: url,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Token": tokenData.access_token,
+          },
+          data: body,
+          timeout: 10000,
+        });
 
-          const response = await axios({
-            method: endpoint.method,
-            url: url,
-            headers: {
-              "Content-Type": "application/json",
-              "Access-Token": tokenData.access_token,
-            },
-            data: body,
-            timeout: 10000, // 10 segundos timeout
-          });
+        const isRealSuccess =
+          response.data?.status !== 404 &&
+          response.data?.status !== 500 &&
+          response.data?.code !== 402004;
 
-          results.push({
-            domain,
-            name: endpoint.name,
-            path: endpoint.path,
-            url,
-            status: response.status,
-            success: true,
-            hasData: !!response.data?.data,
-            dataLength: response.data?.data?.length || 0,
-            responsePreview: JSON.stringify(response.data).substring(0, 200),
-          });
+        results.push({
+          name: endpoint.name,
+          path: endpoint.path,
+          bodyType: endpoint.bodyType,
+          status: response.status,
+          apiStatus: response.data?.status || response.data?.code,
+          success: isRealSuccess,
+          message: response.data?.message,
+          hasData: !!response.data?.data,
+          dataPreview: response.data?.data
+            ? JSON.stringify(response.data.data).substring(0, 300)
+            : null,
+          fullResponse: JSON.stringify(response.data).substring(0, 500),
+        });
 
-          console.log(`✅ FUNCIONA: ${url}`);
-          console.log(`   Status: ${response.status}`);
+        if (isRealSuccess) {
+          console.log(`✅ FUNCIONA: ${endpoint.name}`);
           console.log(
-            `   Data: ${JSON.stringify(response.data).substring(0, 100)}...`
+            `   Response: ${JSON.stringify(response.data).substring(0, 200)}`
           );
-        } catch (error: any) {
-          const status = error.response?.status || "timeout";
-          const errorData = error.response?.data;
-
-          results.push({
-            domain,
-            name: endpoint.name,
-            path: endpoint.path,
-            url,
-            status: status,
-            success: false,
-            error: error.message,
-            errorData: errorData
-              ? JSON.stringify(errorData).substring(0, 200)
-              : null,
-          });
-
-          // Logar erros diferentes de 404
-          if (status !== 404) {
-            console.log(`⚠️ ERRO ${status}: ${url}`);
-            console.log(`   Mensagem: ${error.message}`);
-            if (errorData) {
-              console.log(
-                `   Response: ${JSON.stringify(errorData).substring(0, 100)}`
-              );
-            }
-          }
         }
+      } catch (error: any) {
+        const status = error.response?.status || "timeout";
+        results.push({
+          name: endpoint.name,
+          path: endpoint.path,
+          status: status,
+          success: false,
+          error: error.message,
+        });
       }
     }
 
-    // Separar resultados por domínio
-    const byDomain: any = {};
-    for (const domain of DOMAINS) {
-      const domainResults = results.filter((r) => r.domain === domain);
-      byDomain[domain] = {
-        working: domainResults.filter((r) => r.success),
-        errors: domainResults.filter((r) => !r.success && r.status !== 404),
-        notFound: domainResults.filter((r) => r.status === 404).length,
-      };
-    }
-
-    // Resumo geral
-    const allWorking = results.filter((r) => r.success);
+    const working = results.filter((r) => r.success);
+    const apiErrors = results.filter((r) => !r.success && r.status === 200); // 200 mas com erro interno
+    const notFound = results.filter((r) => r.status === 404);
 
     return NextResponse.json({
       success: true,
       summary: {
-        totalTests: results.length,
-        totalWorking: allWorking.length,
-        domains: DOMAINS,
+        total: results.length,
+        working: working.length,
+        apiErrors: apiErrors.length,
+        notFound: notFound.length,
       },
-      byDomain,
-      allWorking,
+      working,
+      apiErrors,
+      allResults: results,
     });
   } catch (error: any) {
-    console.error("Erro ao testar endpoints:", error);
+    console.error("Erro:", error);
     return NextResponse.json(
       {
         success: false,
