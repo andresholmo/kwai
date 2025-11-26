@@ -439,37 +439,71 @@ class KwaiAPI {
   /**
    * Criar Ad Set
    */
-  async createAdSet(
-    accountId: number,
-    adSetData: {
-      campaignId: number;
-      unitName: string;
-      optimizeTarget: number; // 1=Click, 2=Impression, 3=Conversion
-      bidType: number; // 1=CPC, 2=CPM, 3=oCPC
-      bid: number; // em centavos
-      unitBudget: number; // em centavos
-      scheduleStartTime: string; // formato: "2024-01-01 00:00:00"
-      scheduleEndTime?: string;
-      // Targeting
-      region?: number[]; // IDs de regiões
-      gender?: number; // 0=All, 1=Male, 2=Female
-      ageMin?: number;
-      ageMax?: number;
+  async createAdSet(accountId: number, adSetData: any) {
+    console.log("=== CREATE AD SET INPUT ===");
+    console.log("adSetData:", JSON.stringify(adSetData, null, 2));
+
+    // Construir objeto do unit (ad set)
+    const unitObject: any = {
+      campaignId: adSetData.campaignId,
+      unitName: adSetData.unitName || adSetData.name,
+      websiteUrl: adSetData.websiteUrl || adSetData.destinationUrl,
+      optimizeTarget: adSetData.optimizeTarget || adSetData.optimizationGoal || 1,
+      bidType: adSetData.bidType || 1,
+      bid: adSetData.bid || 100000, // Mínimo 0.001 = 100000 micro
+      scheduleStartTime:
+        adSetData.scheduleStartTime || this.formatDate(new Date()),
+    };
+
+    // Adicionar campos opcionais
+    if (adSetData.gender !== undefined) {
+      unitObject.gender = adSetData.gender;
     }
-  ) {
+
+    if (adSetData.region && adSetData.region.length > 0) {
+      unitObject.region = adSetData.region;
+    }
+
+    if (adSetData.ageMin) {
+      unitObject.ageMin = adSetData.ageMin;
+    }
+
+    if (adSetData.ageMax) {
+      unitObject.ageMax = adSetData.ageMax;
+    }
+
+    // Orçamento do Ad Set (se definido)
+    if (adSetData.dayBudget && adSetData.dayBudget > 0) {
+      unitObject.budgetType = 2; // Orçamento diário
+      unitObject.dayBudget = adSetData.dayBudget;
+    } else if (adSetData.unitBudget && adSetData.unitBudget > 0) {
+      unitObject.budgetType = 2;
+      unitObject.dayBudget = adSetData.unitBudget;
+    } else if (adSetData.budget && adSetData.budget > 0) {
+      unitObject.budgetType = 2;
+      unitObject.dayBudget = adSetData.budget;
+    }
+
+    // Payload com estrutura correta - unitAddModelList é um ARRAY
+    const payload = {
+      accountId,
+      adCategory: adSetData.adCategory || 1,
+      unitAddModelList: [unitObject], // <-- ARRAY com o unit object
+    };
+
+    console.log("=== FINAL AD SET PAYLOAD ===");
+    console.log(JSON.stringify(payload, null, 2));
+    console.log("============================");
+
     const response = await this.client.post(
       "/rest/n/mapi/unit/dspUnitAddPerformance",
-      {
-        accountId,
-        adCategory: 1,
-        ...adSetData,
-      }
+      payload
     );
 
     console.log("=== CREATE AD SET RESPONSE ===");
     console.log(JSON.stringify(response.data, null, 2));
 
-    // Extrair unitId da estrutura correta: response.data.data[0].unitId
+    // Extrair unitId da resposta
     const unitId =
       response.data?.data?.data?.[0]?.unitId ||
       response.data?.data?.[0]?.unitId ||
@@ -477,11 +511,20 @@ class KwaiAPI {
 
     console.log("Extracted unitId:", unitId);
 
-    // Retornar com unitId no nível superior para facilitar
     return {
       ...response.data,
       unitId: unitId,
     };
+  }
+
+  /**
+   * Helper para formatar data
+   */
+  private formatDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day} 00:00:00`;
   }
 
   /**
@@ -625,41 +668,41 @@ class KwaiAPI {
   /**
    * Criar criativo
    */
-  async createCreative(
-    accountId: number,
-    creativeData: {
-      unitId: number;
-      creativeName: string;
-      materialId?: number; // Deprecated - usar photoId
-      photoId?: number; // Novo campo - photoId do material
-      actionType: number; // 1=Learn More, 2=Download, etc
-      actionUrl: string; // URL de destino
-      description?: string;
-    }
-  ) {
-    const creativePayload: any = {
+  async createCreative(accountId: number, creativeData: any) {
+    console.log("=== CREATE CREATIVE INPUT ===");
+    console.log("creativeData:", JSON.stringify(creativeData, null, 2));
+
+    // Construir objeto do criativo
+    const creativeObject: any = {
       unitId: creativeData.unitId,
-      creativeName: creativeData.creativeName,
-      actionType: creativeData.actionType,
-      actionUrl: creativeData.actionUrl,
-      ...(creativeData.description && { description: creativeData.description }),
+      creativeName: creativeData.creativeName || creativeData.name,
+      actionType: creativeData.actionType || 1,
+      actionUrl: creativeData.actionUrl || creativeData.destinationUrl || creativeData.clickUrl,
+      ...(creativeData.description && { desc: creativeData.description }),
     };
 
     // Adicionar photoId se selecionado (preferido)
     if (creativeData.photoId) {
-      creativePayload.photoId = creativeData.photoId;
+      creativeObject.photoId = creativeData.photoId;
     } else if (creativeData.materialId) {
       // Fallback para materialId (compatibilidade)
-      creativePayload.materialId = creativeData.materialId;
+      creativeObject.materialId = creativeData.materialId;
     }
+
+    // Payload com estrutura correta - creativeAddModelList é um ARRAY
+    const payload = {
+      accountId,
+      adCategory: creativeData.adCategory || 1,
+      creativeAddModelList: [creativeObject], // <-- ARRAY
+    };
+
+    console.log("=== FINAL CREATIVE PAYLOAD ===");
+    console.log(JSON.stringify(payload, null, 2));
+    console.log("=============================");
 
     const response = await this.client.post(
       "/rest/n/mapi/creative/dspCreativeAddPerformance",
-      {
-        accountId,
-        adCategory: 1,
-        ...creativePayload,
-      }
+      payload
     );
 
     console.log("=== CREATE CREATIVE RESPONSE ===");
