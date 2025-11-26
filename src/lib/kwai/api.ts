@@ -484,10 +484,11 @@ class KwaiAPI {
       unitObject.dayBudget = adSetData.budget;
     }
 
-    // Payload com estrutura correta - unitAddModelList é um ARRAY
+    // CORREÇÃO: Payload SEM adCategory no nível raiz
+    // A API não aceita adCategory no nível raiz para este endpoint
     const payload = {
       accountId,
-      adCategory: adSetData.adCategory || 1,
+      // adCategory REMOVIDO - não é aceito neste endpoint
       unitAddModelList: [unitObject], // <-- ARRAY com o unit object
     };
 
