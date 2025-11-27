@@ -444,7 +444,9 @@ class KwaiAPI {
     console.log("adSetData:", JSON.stringify(adSetData, null, 2));
 
     // Construir objeto do unit (ad set)
+    // IMPORTANTE: adCategory deve estar DENTRO do objeto unit, não no nível raiz
     const unitObject: any = {
+      adCategory: 1, // <-- OBRIGATÓRIO dentro de cada unit
       campaignId: adSetData.campaignId,
       unitName: adSetData.unitName || adSetData.name,
       websiteUrl: adSetData.websiteUrl || adSetData.destinationUrl,
